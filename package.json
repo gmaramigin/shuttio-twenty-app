@@ -1,6 +1,6 @@
 {
   "name": "twenty-app-shuttio",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Shuttio for Twenty: open Shuttio from Twenty to import HubSpot, Pipedrive, Affinity, Attio or CSV data.",
   "keywords": [
     "twenty-app",

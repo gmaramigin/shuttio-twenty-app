@@ -1,6 +1,6 @@
 # Shuttio for Twenty
 
-Adds one command to Twenty: **Import data with Shuttio**. Press Cmd+K in Twenty and run it. Shuttio (https://www.shuttio.com) opens in a new tab with Twenty chosen as the destination, and moves your HubSpot, Pipedrive, Affinity, Attio or CSV data into the workspace.
+Adds one command to Twenty: **Import data with Shuttio**. Press Cmd+K in Twenty and run it. Shuttio (https://www.shuttio.com) opens in a new tab with Twenty chosen as the destination, and moves your HubSpot, Pipedrive, Affinity, Attio, Twenty or CSV data into the workspace.
 
 The app reads and writes no workspace data. Its role has no object permissions.
 
@@ -12,7 +12,7 @@ Shuttio copies your CRM data into Twenty. You pick the source and review the fie
 
 ## What moves into Twenty
 
-Sources: HubSpot, Pipedrive, Affinity, Attio and CSV files.
+Sources: HubSpot, Pipedrive, Affinity, Attio, another Twenty workspace (self-hosted or Cloud) and CSV files.
 
 - Companies, people and opportunities go into Twenty's own objects. Every other record object in the source (tickets, products, custom objects) becomes a custom object in Twenty with its fields, select options and links.
 - Fields: you review every source field and choose where it lands. Fields Twenty does not have yet are created for you (text, number, date, select, currency, email, phone, link, address, rating, relation).
@@ -20,13 +20,17 @@ Sources: HubSpot, Pipedrive, Affinity, Attio and CSV files.
 - Notes and tasks land on the records they belong to, with the source's body and dates where Twenty accepts them.
 - Calls and meetings arrive as notes titled "Call" or "Meeting", with time, length and attendees in the text.
 - Pipelines: deal stages go into Twenty's stage field. A source with several pipelines gets options named "Pipeline · Stage".
+- Files: attachments land on their person, company or opportunity, in the full migration (the sample skips them). A source profile photo becomes the person's photo.
+
+## From another Twenty workspace
+
+Move a self-hosted Twenty into Cloud, or merge one workspace into another. Standard fields land on standard fields, custom objects and fields keep their names, and notes and tasks stay on their records, custom-object records included. After the records, Shuttio copies views (columns, filters, sorts, board columns), dashboards and workflows. Workflows arrive as drafts and stay off until you turn them on. Copying workflows needs the OAuth connection; with an API key they are skipped and the run says so. Shuttio refuses to use the same workspace as both source and destination.
 
 ## What does not move
 
-- Files and attachments.
 - Emails. Twenty has no way to take in a message outside its own mailbox sync.
 - Lists. Twenty has views, not static lists.
-- Twenty to Twenty is not offered.
+- From another Twenty workspace: calendar events (they come from Twenty's own sync), records in the trash, workflows with code, email or AI steps, and Twenty's built-in "All" views.
 - A deal's contacts beyond the first. An opportunity in Twenty has one point of contact; the others are counted in the run's warnings.
 - A won or lost deal keeps its stage. Twenty has no separate outcome.
 - A rating outside 1 to 5, or a value a field cannot hold, is left out and listed in the Errors tab with its reason.
