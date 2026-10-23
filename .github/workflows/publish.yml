@@ -48,10 +48,6 @@ jobs:
         run: yarn install --immutable
 
       - name: Publish to npm
-        # Trusted publishing (OIDC) needs no secret. Fallback for the first
-        # release, before a trusted publisher can be registered: add an
-        # NPM_TOKEN repository secret (see SETUP.md). When the secret is unset
-        # the variable is empty and npm uses OIDC.
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        # Trusted publishing (OIDC): no token. NODE_AUTH_TOKEN must stay unset,
+        # even empty, or npm tries it instead of OIDC.
         run: yarn twenty app:publish
