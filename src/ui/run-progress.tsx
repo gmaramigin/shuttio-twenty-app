@@ -6,14 +6,13 @@ import { Text } from 'twenty-ui/primitives/typography';
 import { useTheme } from 'twenty-ui/theme';
 
 import type { MigrationDetail } from 'src/shuttio-api/contract';
+import { recordInTwenty } from 'src/ui/flow';
 
 const percent = (done: number, failed: number, total: number | null) =>
   total && total > 0 ? Math.min(100, Math.round(((done + failed) / total) * 100)) : 0;
 
 const count = (value: number) => value.toLocaleString('en-US');
 
-// Shuttio sends a path inside Twenty (/object/<name>/<id>) when it does not know the workspace address.
-const RECORD_PATH = /^\/object\/([A-Za-z0-9_]+)\/([0-9a-f-]{36})$/;
 
 export const RunProgress = ({ detail }: { detail: MigrationDetail }) => {
   const theme = useTheme();
@@ -49,6 +48,17 @@ export const RunProgress = ({ detail }: { detail: MigrationDetail }) => {
 
       {detail.error && <Text style={{ color: theme.font.color.danger }}>{detail.error}</Text>}
 
+      {detail.warnings && detail.warnings.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: theme.spacing['1'] }}>
+          <Text style={{ fontWeight: theme.font.weight.medium }}>Worth checking</Text>
+          {detail.warnings.slice(0, 8).map((warning) => (
+            <Text key={warning} style={{ color: theme.font.color.secondary }}>
+              {warning}
+            </Text>
+          ))}
+        </div>
+      )}
+
       {detail.errors.length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: theme.spacing['1'] }}>
           <Text style={{ fontWeight: theme.font.weight.medium }}>Records that did not import</Text>
@@ -63,7 +73,8 @@ export const RunProgress = ({ detail }: { detail: MigrationDetail }) => {
       {(detail.links.length > 0 || detail.resultsUrl) && (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: theme.spacing['2'] }}>
           {detail.links.slice(0, 6).map((link) => {
-            const inTwenty = RECORD_PATH.exec(link.url);
+            // A record of this workspace opens here, not in a new tab.
+            const inTwenty = recordInTwenty(link.url);
             return inTwenty ? (
               <MainButton
                 key={link.url}
@@ -71,8 +82,8 @@ export const RunProgress = ({ detail }: { detail: MigrationDetail }) => {
                 size="sm"
                 onClick={() =>
                   void navigate(AppPath.RecordShowPage, {
-                    objectNameSingular: inTwenty[1],
-                    objectRecordId: inTwenty[2],
+                    objectNameSingular: inTwenty.object,
+                    objectRecordId: inTwenty.id,
                   })
                 }
               >

@@ -6,29 +6,34 @@ import { Button, Checkbox } from 'twenty-ui/primitives/input';
 import { Text } from 'twenty-ui/primitives/typography';
 import { useTheme } from 'twenty-ui/theme';
 
-import type { FieldTarget, MappingObject } from 'src/shuttio-api/contract';
+import type { FieldTarget, MappingObject, SourceField } from 'src/shuttio-api/contract';
 
 export const NEW_FIELD = 'new';
 const SKIP = '__skip__';
 
 type TargetPickerProps = {
   object: MappingObject;
+  field: SourceField;
   sourceLabel: string;
   value: FieldTarget;
   disabled: boolean;
   onChange: (value: FieldTarget) => void;
 };
 
-const targetLabel = (object: MappingObject, value: FieldTarget) => {
+// A link to other records is a link: only "Link to …" or Skip, never a text field.
+const isLink = (field: SourceField) => field.type === 'link';
+const newLabelOf = (field: SourceField) => field.newLabel ?? 'New field';
+
+const targetLabel = (object: MappingObject, field: SourceField, value: FieldTarget) => {
   if (value === null) return 'Skip';
-  if (value === NEW_FIELD) return 'New field';
+  if (value === NEW_FIELD) return newLabelOf(field);
   return object.destinationFields.find((field) => field.name === value)?.label ?? value;
 };
 
-const TargetPicker = ({ object, sourceLabel, value, disabled, onChange }: TargetPickerProps) => {
+const TargetPicker = ({ object, field: source, sourceLabel, value, disabled, onChange }: TargetPickerProps) => {
   const [search, setSearch] = useState('');
   const needle = search.trim().toLowerCase();
-  const fields = object.destinationFields.filter(
+  const fields = isLink(source) ? [] : object.destinationFields.filter(
     (field) =>
       needle === '' ||
       field.label.toLowerCase().includes(needle) ||
@@ -46,9 +51,9 @@ const TargetPicker = ({ object, sourceLabel, value, disabled, onChange }: Target
             size="sm"
             fullWidth
             endIcon={<IconChevronDown size={14} />}
-            aria-label={`Destination for ${sourceLabel}: ${targetLabel(object, value)}`}
+            aria-label={`Destination for ${sourceLabel}: ${targetLabel(object, source, value)}`}
           >
-            {targetLabel(object, value)}
+            {targetLabel(object, source, value)}
           </Button>
         }
       />
@@ -66,8 +71,11 @@ const TargetPicker = ({ object, sourceLabel, value, disabled, onChange }: Target
             onValueChange={(next) => onChange(next === SKIP || next === null ? null : next)}
           >
             <Dropdown.OptionItem value={SKIP}>Skip</Dropdown.OptionItem>
-            <Dropdown.OptionItem value={NEW_FIELD} description="Shuttio adds it to Twenty">
-              New field
+            <Dropdown.OptionItem
+              value={NEW_FIELD}
+              description={isLink(source) ? 'Links the records in Twenty' : 'Shuttio adds it to Twenty'}
+            >
+              {newLabelOf(source)}
             </Dropdown.OptionItem>
             {fields.map((field) => (
               <Dropdown.OptionItem key={field.name} value={field.name} description={field.type}>
@@ -100,7 +108,7 @@ export const MappingTable = ({
   const theme = useTheme();
 
   if (objects.length === 0) {
-    return <Text>HubSpot returned no objects to import. Check the HubSpot connection’s scopes.</Text>;
+    return <Text>The source returned no objects to import. Check the connection’s access.</Text>;
   }
 
   return (
@@ -157,7 +165,9 @@ export const MappingTable = ({
                       >
                         {field.empty
                           ? 'No values in the records Shuttio read'
-                          : field.samples && field.samples.length > 0
+                          : isLink(field)
+                            ? 'Linked record'
+                            : field.samples && field.samples.length > 0
                             ? field.samples.join(' · ')
                             : field.type}
                       </Text>
@@ -165,6 +175,7 @@ export const MappingTable = ({
                     <div role="cell" style={{ flex: '1 1 200px', minWidth: 0 }}>
                       <TargetPicker
                         object={object}
+                        field={field}
                         sourceLabel={field.label}
                         value={object.mapping[field.name] ?? null}
                         disabled={disabled}

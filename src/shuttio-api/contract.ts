@@ -72,6 +72,10 @@ export type SourceField = {
   type: string;
   samples?: string[];
   empty?: boolean;
+  // What "new" does for this field, in words: "Link to People", "External ID (the
+  // Attio record ID)", "New field: Created in Attio". Absent: a field of its own.
+  // A field of type 'link' links records; it never becomes a text field.
+  newLabel?: string;
 };
 
 export type MappingObject = {
@@ -143,6 +147,8 @@ export type MigrationDetail = {
   resultsUrl?: string;
   offer?: PriceOffer;
   error?: string | null;
+  // What the run left out or changed, in plain sentences.
+  warnings?: string[];
 };
 
 // `url` is null when nothing is owed: Shuttio then starts the full run itself.

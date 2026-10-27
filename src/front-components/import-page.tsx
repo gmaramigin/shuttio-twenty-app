@@ -34,6 +34,14 @@ import type {
 } from 'src/shuttio-api/contract';
 import { MappingTable } from 'src/ui/mapping-table';
 import { RunProgress } from 'src/ui/run-progress';
+import {
+  canEditFields,
+  doneSteps,
+  initialSource,
+  readRememberedSource,
+  rememberSource,
+} from 'src/ui/flow';
+import type { StepKey } from 'src/ui/flow';
 import { getSourceStatus, shuttio } from 'src/ui/shuttio-client';
 import type { CallResult } from 'src/ui/shuttio-client';
 
@@ -45,8 +53,6 @@ type SourceStatus = {
 };
 
 type Failure = { title: string; message: string };
-
-type StepKey = 'link' | 'source' | 'fields' | 'sample' | 'pay' | 'full';
 
 const stepsFor = (label: string): { key: StepKey; title: string }[] => [
   { key: 'link', title: 'Link your Shuttio account' },
@@ -104,7 +110,9 @@ const ImportPage = () => {
   const [failure, setFailure] = useState<Failure | null>(null);
   const [linkUrl, setLinkUrl] = useState<string | null>(null);
   const [status, setStatus] = useState<StatusResponse | null>(null);
-  const [source, setSource] = useState<SourceProvider>('hubspot');
+  const [source, setSource] = useState<SourceProvider>(() => initialSource(null, readRememberedSource()));
+  // Set once the page settled on a source: from the newest migration, or a click.
+  const sourceSettled = useRef(false);
   const [connection, setConnection] = useState<SourceStatus | null>(null);
   // Set when Shuttio has no unstarted migration of this source: linking again makes one.
   const [relinkUrl, setRelinkUrl] = useState<string | null>(null);
@@ -146,12 +154,13 @@ const ImportPage = () => {
     setMappingDirty(false);
   }, [source]);
 
-  const load = useCallback(async () => {
+  // Answers whether the workspace is linked to Shuttio.
+  const load = useCallback(async (): Promise<boolean> => {
     setLoading(true);
     setFailure(null);
 
     const statusResult = await shuttio.get<StatusResponse>('status');
-    if (!mounted.current) return;
+    if (!mounted.current) return false;
 
     if (!statusResult.ok) {
       if (statusResult.code === 'link_required' && statusResult.linkUrl) {
@@ -161,7 +170,17 @@ const ImportPage = () => {
         setFailure(failureOf('Shuttio did not answer', statusResult));
       }
       setLoading(false);
-      return;
+      return false;
+    }
+
+    // A migration that exists decides the source on the first load; the effect loads again for it.
+    if (!sourceSettled.current) {
+      sourceSettled.current = true;
+      const settled = initialSource(statusResult.data, readRememberedSource());
+      if (settled !== source) {
+        setSource(settled);
+        return statusResult.data.linked;
+      }
     }
 
     setStatus(statusResult.data);
@@ -169,7 +188,7 @@ const ImportPage = () => {
 
     setRelinkUrl(null);
     const connectionResult = await getSourceStatus<SourceStatus>(source);
-    if (!mounted.current) return;
+    if (!mounted.current) return false;
     if (connectionResult.ok) {
       setConnection(connectionResult.data);
     } else {
@@ -179,15 +198,29 @@ const ImportPage = () => {
     const current = latestMigration(statusResult.data, source);
     if (current) {
       const loaded = await loadDetail(current.id);
-      if (loaded && loaded.sourceConnected && !isRunning(loaded.status) && !loaded.paid) {
+      // Shuttio keeps the fields editable only in setup; after the sample the page shows its result.
+      if (loaded && loaded.sourceConnected && canEditFields(loaded)) {
         await loadMapping(current.id);
+      } else {
+        setMapping(null);
       }
     } else {
       setDetail(null);
       setMapping(null);
     }
     if (mounted.current) setLoading(false);
+    return statusResult.data.linked;
   }, [loadDetail, loadMapping, source]);
+
+  const checkLink = async () => {
+    const linked = await load();
+    if (!linked && mounted.current) {
+      setFailure({
+        title: 'Twenty is not linked to Shuttio yet',
+        message: 'Finish the steps in the Shuttio tab, then try again.',
+      });
+    }
+  };
 
   useEffect(() => {
     void load();
@@ -312,9 +345,11 @@ const ImportPage = () => {
     if (started !== null) await loadDetail(detail.id);
   };
 
+  // Settings → Apps → Shuttio, where "Add connection" lives; the apps list when the id is unknown.
   const openAppSettings = async () => {
-    if (!connection?.applicationId) return;
-    await navigate(AppPath.SettingsCatchAll, { '*': `applications/${connection.applicationId}` });
+    await navigate(AppPath.SettingsCatchAll, {
+      '*': connection?.applicationId ? `applications/${connection.applicationId}` : 'applications',
+    });
   };
 
   const changeTarget = (sourceObject: string, sourceField: string, target: FieldTarget) => {
@@ -353,19 +388,12 @@ const ImportPage = () => {
   };
 
   // Which steps are finished, from what Shuttio and Twenty report.
-  const linked = status?.linked === true;
-  const sourceReady = connection?.connected === true && detail?.sourceConnected === true;
-  const sampleDone =
-    detail !== null &&
-    (detail.paid || detail.status === 'sample_done' || (!detail.isSample && detail.status !== 'setup'));
-  const done: Record<StepKey, boolean> = {
-    link: linked,
-    source: sourceReady,
-    fields: detail?.mappingSaved === true && !mappingDirty,
-    sample: sampleDone,
-    pay: detail?.paid === true,
-    full: detail !== null && !detail.isSample && detail.status === 'done',
-  };
+  const done = doneSteps({
+    linked: status?.linked === true,
+    sourceConnected: connection?.connected === true && detail?.sourceConnected === true,
+    detail,
+    mappingDirty,
+  });
   const currentStep = STEPS.find((step) => !done[step.key])?.key ?? 'full';
   const currentIndex = STEPS.findIndex((step) => step.key === currentStep);
 
@@ -392,7 +420,7 @@ const ImportPage = () => {
               ) : (
                 <MainButton disabled>Open Shuttio</MainButton>
               )}
-              <LightButton startIcon={<IconRefresh size={16} />} onClick={() => void load()} loading={loading}>
+              <LightButton startIcon={<IconRefresh size={16} />} onClick={() => void checkLink()} loading={loading}>
                 I’ve connected
               </LightButton>
             </div>
@@ -405,16 +433,16 @@ const ImportPage = () => {
             <>
               <Text>
                 {connection?.needsReconnect
-                  ? `The ${label} connection${connection.handle ? ` (${connection.handle})` : ''} stopped working. Reconnect it in the Shuttio app settings.`
-                  : `Connect the ${label} account to import from. Open Settings → Apps → Shuttio and click Add connection in the ${label} section.${source === 'hubspot' ? ' HubSpot asks a super admin to approve read access.' : ''}`}
+                  ? `The ${label} connection${connection.handle ? ` (${connection.handle})` : ''} stopped working. Click Reconnect under ${label}.`
+                  : `Click Add connection under ${label}.${source === 'hubspot' ? ' HubSpot asks a super admin to approve read access.' : ''}`}
               </Text>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: theme.spacing['2'] }}>
                 <MainButton
                   startIcon={<IconSettings size={16} />}
                   onClick={() => void openAppSettings()}
-                  disabled={!connection?.applicationId}
+                  disabled={connection === null}
                 >
-                  Open Shuttio settings
+                  {connection?.needsReconnect ? `Reconnect ${label}` : `Connect ${label}`}
                 </MainButton>
                 <LightButton startIcon={<IconRefresh size={16} />} onClick={() => void load()} loading={loading}>
                   Check again
@@ -501,7 +529,7 @@ const ImportPage = () => {
         if (detail.status === 'sample_done') {
           return (
             <>
-              <Text>The sample is in Twenty. Open a few records and check them before you pay.</Text>
+              <Text>The sample is in Twenty. Open a few records and check them, then pay for the full migration.</Text>
               <RunProgress detail={detail} />
               <div>
                 <LightButton onClick={() => void rollback()} loading={busy === 'rollback'} disabled={busy !== null}>
@@ -638,6 +666,8 @@ const ImportPage = () => {
                   aria-pressed={false}
                   disabled={busy !== null}
                   onClick={() => {
+                    sourceSettled.current = true;
+                    rememberSource(provider);
                     setDetail(null);
                     setMapping(null);
                     setConnection(null);
@@ -684,7 +714,7 @@ const ImportPage = () => {
             const isCurrent = step.key === currentStep;
             const isLocked = index > currentIndex;
             const canReopen =
-              isDone && step.key === 'fields' && detail !== null && detail.isSample && !isRunning(detail.status) && !detail.paid;
+              isDone && step.key === 'fields' && canEditFields(detail);
             const expanded = isCurrent || openStep === step.key || (step.key === 'sample' && isDone && detail?.isSample === true && !detail.paid) || (step.key === 'full' && detail !== null && !detail.isSample);
             return (
               <section

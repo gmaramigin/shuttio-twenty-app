@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.2.0
+
+- The source (HubSpot, Attio, Pipedrive) comes from the newest migration, else the last choice in this browser; a reload no longer resets it to HubSpot.
+- After the free sample the page shows its result (counts, what to check, links that open the records inside Twenty) and Pay next, instead of going back to Review fields.
+- "I've connected" before the link exists says so: "Twenty is not linked to Shuttio yet."
+- Connect step: a "Connect <source>" button opens this app's settings page inside Twenty, where Add connection lives. The app id comes from the app token.
+- A link field shows as a link ("Link to People"), without record ids, and offers only the link or Skip. The source's record id says it goes to External ID.
+- A GET that never reached Twenty is sent once more before the page shows an error.
+
 ## 2.1.0
 
 - Attio and Pipedrive as sources next to HubSpot: the page picks the source; `source-token` and the status route take `provider=hubspot|attio|pipedrive`.

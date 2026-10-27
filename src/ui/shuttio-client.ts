@@ -36,14 +36,23 @@ const run = async <T>(send: (client: RestApiClient) => Promise<unknown>): Promis
       const status = error.status ?? 0;
       return { ok: false, status, ...describeFailure(status, error.body) };
     }
+    // fetch itself threw (a network error, or an answer the browser refused): say what, for the console.
+    console.warn('Shuttio request did not reach Twenty', error instanceof Error ? `${error.name}: ${error.message}` : String(error));
     return { ok: false, status: 0, ...describeFailure(0, null) };
   }
 };
 
 const proxyPath = (path: string) => `/s${PROXY_ROUTE_PREFIX}/${path}`;
 
+// A GET that never reached Twenty (status 0: the request threw before any answer, as
+// on a cold logic function) is sent once more. Writes are never repeated.
+export const withOneRetry = async <T>(call: () => Promise<CallResult<T>>): Promise<CallResult<T>> => {
+  const first = await call();
+  return !first.ok && first.status === 0 ? call() : first;
+};
+
 export const shuttio = {
-  get: <T>(path: string) => run<T>((client) => client.get(proxyPath(path))),
+  get: <T>(path: string) => withOneRetry(() => run<T>((client) => client.get(proxyPath(path)))),
   post: <T>(path: string, body: unknown = {}) =>
     run<T>((client) => client.post(proxyPath(path), body)),
   put: <T>(path: string, body: unknown) =>
@@ -51,4 +60,4 @@ export const shuttio = {
 };
 
 export const getSourceStatus = <T>(provider: SourceProvider) =>
-  run<T>((client) => client.get(`/s${SOURCE_STATUS_ROUTE}?provider=${provider}`));
+  withOneRetry(() => run<T>((client) => client.get(`/s${SOURCE_STATUS_ROUTE}?provider=${provider}`)));

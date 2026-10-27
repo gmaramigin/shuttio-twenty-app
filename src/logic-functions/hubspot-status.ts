@@ -4,6 +4,7 @@ import { HUBSPOT_STATUS_FUNCTION_UNIVERSAL_IDENTIFIER } from 'src/constants/univ
 import type { RoutePayload } from 'twenty-sdk/logic-function';
 
 import { SOURCE_STATUS_ROUTE } from 'src/shuttio-api/contract';
+import { applicationIdFromToken } from 'src/shuttio-api/app-token';
 import { findSourceConnection, isSourceProvider } from 'src/shuttio-api/sources';
 
 export type SourceStatus = {
@@ -33,7 +34,9 @@ export default defineLogicFunction({
       connected: usable !== null,
       handle: usable?.handle ?? failed?.handle ?? null,
       needsReconnect: usable === null && failed !== null,
-      applicationId: process.env.APPLICATION_ID ?? null,
+      // The id in Settings → Apps → <app>: the app token's applicationId claim.
+      applicationId:
+        process.env.APPLICATION_ID ?? applicationIdFromToken(process.env.TWENTY_APP_ACCESS_TOKEN),
     };
   },
 });
