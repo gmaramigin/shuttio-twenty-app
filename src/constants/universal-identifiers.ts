@@ -1,6 +1,6 @@
 export const APP_DISPLAY_NAME = 'Shuttio';
 export const APP_DESCRIPTION =
-  'Move HubSpot, Pipedrive, Affinity, Attio or CSV data into Twenty: companies, people, opportunities, custom objects, notes and tasks, with the links between them.';
+  'Move HubSpot data into Twenty from a page inside your workspace: companies, people, deals, custom objects, notes and tasks, with the links between them.';
 export const APPLICATION_UNIVERSAL_IDENTIFIER = 'ec2186f5-bd22-4817-ba34-09453cb26edf';
 export const DEFAULT_ROLE_UNIVERSAL_IDENTIFIER = 'c24420b8-062e-4cee-bb33-253c8e05a1aa';
 export const IMPORT_FRONT_COMPONENT_UNIVERSAL_IDENTIFIER =
@@ -8,7 +8,32 @@ export const IMPORT_FRONT_COMPONENT_UNIVERSAL_IDENTIFIER =
 export const IMPORT_COMMAND_MENU_ITEM_UNIVERSAL_IDENTIFIER =
   'd16df6fc-db74-4c68-85db-795eedbe9a55';
 
-// Shuttio intake with Twenty preselected as the destination. Signed-out visitors
-// are sent to sign-in and come back to this page.
-export const SHUTTIO_IMPORT_URL =
-  'https://www.shuttio.com/intake?to=twenty&utm_source=twenty&utm_medium=app';
+// 2.0.0: the import page inside Twenty.
+export const SHUTTIO_BASE_URL_VARIABLE_UNIVERSAL_IDENTIFIER =
+  'a1c2a9e8-f107-41c1-998c-8a6438145c3c';
+export const HUBSPOT_CONNECTION_PROVIDER_UNIVERSAL_IDENTIFIER =
+  '83e35437-caa0-408a-914f-10c0cb22e159';
+export const HUBSPOT_IDENTIFY_ACCOUNT_FUNCTION_UNIVERSAL_IDENTIFIER =
+  '452fe9e1-8444-4458-a96c-231d20e18aa5';
+export const PROXY_GET_FUNCTION_UNIVERSAL_IDENTIFIER =
+  '7b818cbc-bdb6-4bc3-82f3-95969608ff92';
+export const PROXY_POST_FUNCTION_UNIVERSAL_IDENTIFIER =
+  '63d4199f-e19e-4320-bb00-03352fbaa2d3';
+export const PROXY_PUT_FUNCTION_UNIVERSAL_IDENTIFIER =
+  '69f27631-8929-49d9-94c5-175b86703ef4';
+export const SOURCE_TOKEN_FUNCTION_UNIVERSAL_IDENTIFIER =
+  'fc8561ae-9be1-4b04-b4da-17b3eb18423d';
+export const HUBSPOT_STATUS_FUNCTION_UNIVERSAL_IDENTIFIER =
+  '07880e46-58e0-4336-9621-7184d2169785';
+export const IMPORT_PAGE_LAYOUT_UNIVERSAL_IDENTIFIER =
+  '108fecd3-f585-4a76-8e1a-563b4c7813fd';
+export const IMPORT_PAGE_TAB_UNIVERSAL_IDENTIFIER =
+  'ad57ddf6-6d93-4ace-9342-c87972deb531';
+export const IMPORT_PAGE_WIDGET_UNIVERSAL_IDENTIFIER =
+  '62822b63-a0c0-4201-8473-f910695df1ff';
+export const IMPORT_PAGE_NAVIGATION_ITEM_UNIVERSAL_IDENTIFIER =
+  'd55ce5e4-90ab-4d75-9df2-7022995cafe7';
+export const IMPORT_PAGE_FRONT_COMPONENT_UNIVERSAL_IDENTIFIER =
+  '4588797a-94fb-49d8-b9f3-c4ed4f98767b';
+
+export const IMPORT_PAGE_NAME = 'Import with Shuttio';

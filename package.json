@@ -1,7 +1,7 @@
 {
   "name": "twenty-app-shuttio",
-  "version": "1.0.1",
-  "description": "Shuttio for Twenty: open Shuttio from Twenty to import HubSpot, Pipedrive, Affinity, Attio or CSV data.",
+  "version": "2.0.0",
+  "description": "Shuttio for Twenty: import HubSpot data from a page inside your Twenty workspace.",
   "keywords": [
     "twenty-app",
     "twenty",
@@ -24,7 +24,7 @@
     "node": "^24.5.0",
     "npm": "please-use-yarn",
     "yarn": ">=4.0.2",
-    "twenty": ">=2.49.0"
+    "twenty": ">=2.51.0"
   },
   "packageManager": "yarn@4.13.0",
   "scripts": {
@@ -43,9 +43,9 @@
     "oxlint": "^0.16.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "twenty-client-sdk": "2.50.0",
-    "twenty-sdk": "2.50.0",
-    "twenty-ui": "2.50.0",
+    "twenty-client-sdk": "2.51.3",
+    "twenty-sdk": "2.51.3",
+    "twenty-ui": "2.51.3",
     "typescript": "^5.9.3",
     "vite-tsconfig-paths": "^4.2.1",
     "vitest": "^4.0.0"

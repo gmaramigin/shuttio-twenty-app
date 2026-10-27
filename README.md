@@ -1,49 +1,38 @@
 # Shuttio for Twenty
 
-Adds one command to Twenty: **Import data with Shuttio**. Press Cmd+K in Twenty and run it. Shuttio (https://www.shuttio.com) opens in a new tab with Twenty chosen as the destination, and moves your HubSpot, Pipedrive, Affinity, Attio, Twenty or CSV data into the workspace.
+Adds an **Import with Shuttio** page to the left menu of your Twenty workspace. From that page you move your HubSpot data into Twenty: link a Shuttio account, connect HubSpot, review the field mapping, check a free sample, pay, and run the full migration. The command **Import data with Shuttio** (Cmd+K) opens the same page.
 
-The app reads and writes no workspace data. Its role has no object permissions.
+HubSpot is the first source on this page. Pipedrive, Affinity, Attio, another Twenty workspace and CSV files still go through https://www.shuttio.com with Twenty as the destination.
 
-**Install:** in Twenty, open Settings, then Apps, find Shuttio in the marketplace and install it.
+## Setup
 
-## About Shuttio
+**App owner, once per Twenty server.** In Twenty, open Settings → Developers → Shuttio → Config and fill in `HUBSPOT_CLIENT_ID` and `HUBSPOT_CLIENT_SECRET`: the client ID and secret of the Shuttio HubSpot app. The HubSpot app must list `https://api.twenty.com/auth/apps/callback` (Twenty Cloud) as a redirect URL.
 
-Shuttio copies your CRM data into Twenty. You pick the source and review the field mapping, then Shuttio runs a sample so you can check the result in Twenty before anything else moves.
+**Workspace admin, once per workspace.**
+
+1. Install Shuttio from Settings → Apps.
+2. Open Settings → Apps → Shuttio and click **Add connection** in the HubSpot section. A HubSpot super admin approves read access.
+3. Open **Import with Shuttio** in the left menu and follow the six steps.
+
+Step 1 opens Shuttio in a new tab: you sign in to Shuttio and connect this workspace there with Twenty's OAuth. Use an admin account: Shuttio adds custom fields, options and objects.
 
 ## What moves into Twenty
 
-Sources: HubSpot, Pipedrive, Affinity, Attio, another Twenty workspace (self-hosted or Cloud) and CSV files.
-
-- Companies, people and opportunities go into Twenty's own objects. Every other record object in the source (tickets, products, custom objects) becomes a custom object in Twenty with its fields, select options and links.
-- Fields: you review every source field and choose where it lands. Fields Twenty does not have yet are created for you (text, number, date, select, currency, email, phone, link, address, rating, relation).
+- Companies, contacts and deals go into Twenty's companies, people and opportunities. Other HubSpot objects (tickets, products, custom objects) become custom objects with their fields, options and links.
+- You choose where each HubSpot field lands: an existing Twenty field, a new field, or nowhere.
 - Links between records: a deal stays linked to its company and contact.
-- Notes and tasks land on the records they belong to, with the source's body and dates where Twenty accepts them.
-- Calls and meetings arrive as notes titled "Call" or "Meeting", with time, length and attendees in the text.
-- Pipelines: deal stages go into Twenty's stage field. A source with several pipelines gets options named "Pipeline · Stage".
-- Files: attachments land on their person, company or opportunity, in the full migration (the sample skips them). A source profile photo becomes the person's photo.
+- Notes and tasks land on the records they belong to. Calls and meetings arrive as notes titled "Call" or "Meeting".
+- People are matched by email and companies by domain. A matched record is linked to and never changed or removed.
 
-## From another Twenty workspace
-
-Move a self-hosted Twenty into Cloud, or merge one workspace into another. Standard fields land on standard fields, custom objects and fields keep their names, and notes and tasks stay on their records, custom-object records included. After the records, Shuttio copies views (columns, filters, sorts, board columns), dashboards and workflows. Workflows arrive as drafts and stay off until you turn them on. Copying workflows needs the OAuth connection; with an API key they are skipped and the run says so. Shuttio refuses to use the same workspace as both source and destination.
-
-## What does not move
-
-- Emails. Twenty has no way to take in a message outside its own mailbox sync.
-- Lists. Twenty has views, not static lists.
-- From another Twenty workspace: calendar events (they come from Twenty's own sync), records in the trash, workflows with code, email or AI steps, and Twenty's built-in "All" views.
-- A deal's contacts beyond the first. An opportunity in Twenty has one point of contact; the others are counted in the run's warnings.
-- A won or lost deal keeps its stage. Twenty has no separate outcome.
-- A rating outside 1 to 5, or a value a field cannot hold, is left out and listed in the Errors tab with its reason.
+Not moved: emails (Twenty takes in mail only through its own mailbox sync), HubSpot lists (Twenty has views, not static lists), and a deal's contacts beyond the first (an opportunity has one point of contact).
 
 ## Sample first, then everything
 
-A migration starts with a free sample: 5% of each root object, 10 to 1,000 records, picked at random, with linked records. You check it in Twenty. "Run full migration" then moves the rest. Records already in Twenty are matched, not duplicated: people by email, companies by domain. A matched record is linked to and never changed or removed by Shuttio.
-
-Every record gets a result. A failed record shows its reason and a suggested fix, and the report downloads as a CSV. Retry re-runs only the failed records. Rollback removes the records, notes, tasks and links the migration created, and then the custom fields and empty custom objects it added.
+The sample is free: 5% of each object, 10 to 1,000 records, picked at random, with linked records. You check it in Twenty, then pay and run the rest. Records the sample created are matched, not duplicated. **Roll back** removes the records, notes, tasks and links the migration created, then the fields and empty objects it added.
 
 ## Price
 
-The sample is free. A CSV import is free at any size. A CRM migration is paid once, after you see the sample, by the number of records counted in the source:
+The sample is free. The full migration is paid once, by the number of records counted in HubSpot:
 
 | Records | Price |
 |---|---|
@@ -55,20 +44,31 @@ The sample is free. A CSV import is free at any size. A CRM migration is paid on
 | up to 5,000,000 | $4,749 |
 | over 5,000,000 | email help@shuttio.com |
 
-A payment covers its band and every smaller one. Current prices: https://www.shuttio.com/pricing
+Payment runs through Stripe Checkout in a new tab. Current prices: https://www.shuttio.com/pricing
 
-## Security
+## Privacy
 
-Shuttio reads the source over OAuth where the source offers it (Affinity takes an API key). It connects to Twenty with OAuth or with an API key you paste. The credential is checked before it is stored, encrypted at rest under a per-record data key, and never logged or sent through a job queue. You can revoke it in Twenty at any time. Shuttio does not keep your records: it keeps the structure, the field mapping and an id map, which is what makes a re-run safe and a rollback complete. A CSV file is deleted when the import finishes. Claude, Anthropic's model, reads at most three 80-character samples per CSV column to guess its type and never writes data. Details and the subprocessor list: https://www.shuttio.com/security
+**What leaves the workspace, and where it goes.** Everything goes to Shuttio at https://www.shuttio.com. Processing runs on Vercel in the United States; the subprocessor list is at https://www.shuttio.com/security.
 
-## How to connect
+- Each request from the page carries the signed-in member's short-lived Twenty token (30 minutes) and the workspace's API address. Shuttio uses them to check which workspace and member is asking.
+- When Shuttio reads HubSpot, it asks the app for the workspace's HubSpot access token. Twenty keeps and refreshes the HubSpot connection; Shuttio stores no HubSpot token.
+- HubSpot records pass through Shuttio on their way into Twenty. Shuttio writes them with its own Twenty OAuth connection, which you grant in step 1.
 
-1. In Twenty, press Cmd+K and run **Import data with Shuttio**, or go to https://www.shuttio.com and choose Twenty as the destination.
-2. Choose your source and sign in to Shuttio with Google or email.
-3. Connect the source, then connect your Twenty workspace. Use an admin account: Shuttio adds custom fields, options and objects.
-4. Tick the objects, review the field mapping, and start the sample.
+**What Shuttio keeps, and for how long.** Shuttio does not keep your records. It keeps the structure, the field mapping and a map of HubSpot ids to Twenty ids, which makes a re-run safe and a rollback complete. A value that failed to import is kept in the error report and cleared 14 days after the migration finishes. Shuttio's Twenty OAuth token is encrypted at rest and deleted 14 days after the migration finishes.
 
-Twenty allows 100 requests a minute and 60 records per request, so tens of thousands of records take minutes. Shuttio pauses on a rate limit and resumes.
+**How to delete.** Uninstalling the app deletes the HubSpot connection from Twenty. To delete your Shuttio account and everything it holds, email help@shuttio.com.
+
+**What the app can read in Twenty.** Nothing. Its role has no object permissions; Shuttio writes through its own OAuth connection.
+
+## Supported Twenty versions
+
+Twenty Cloud, server version 2.51.0 or later (`engines.twenty` in `package.json`).
+
+Self-hosted Twenty 2.51.0 or later should work but is not tested. Its server admin enters the client ID and secret of a HubSpot app that lists `https://<your-twenty-server>/auth/apps/callback` as a redirect URL, and Shuttio must reach the server over HTTPS.
+
+## Security note for workspace admins
+
+Shuttio fetches the HubSpot token from the app's route `/shuttio/source-token`. Twenty authenticates every caller of that route but does not tell the app which OAuth client issued the caller's token, so the app also requires a secret it generated, kept in its own key-value store and sent only to Shuttio. A member or API key of this workspace without that secret gets a 403.
 
 Help: help@shuttio.com. Terms: https://www.shuttio.com/terms
 
