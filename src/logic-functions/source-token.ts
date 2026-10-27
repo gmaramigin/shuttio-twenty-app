@@ -6,7 +6,8 @@ import type { RoutePayload } from 'twenty-sdk/logic-function';
 
 import { SOURCE_TOKEN_FUNCTION_UNIVERSAL_IDENTIFIER } from 'src/constants/universal-identifiers';
 import { SOURCE_SECRET_HEADER, SOURCE_TOKEN_ROUTE } from 'src/shuttio-api/contract';
-import { findHubspotConnection, readHubspotTokenInfo } from 'src/shuttio-api/hubspot';
+import { readHubspotTokenInfo } from 'src/shuttio-api/hubspot';
+import { findSourceConnection, isSourceProvider, SOURCE_LABELS } from 'src/shuttio-api/sources';
 import { SOURCE_SECRET_KV_KEY } from 'src/shuttio-api/proxy';
 
 const sameSecret = (given: string, expected: string) => {
@@ -15,8 +16,8 @@ const sameSecret = (given: string, expected: string) => {
   return a.length === b.length && timingSafeEqual(a, b);
 };
 
-// Shuttio calls this with its Twenty OAuth token to read the workspace's HubSpot
-// token on demand; Shuttio stores no HubSpot token of its own.
+// Shuttio calls this with its Twenty OAuth token to read the workspace's HubSpot,
+// Attio or Pipedrive token on demand; Shuttio stores no source token of its own.
 //
 // Twenty authenticates the caller but does not tell the function which OAuth client
 // issued the token, so any member token or API key of this workspace passes that
@@ -25,7 +26,7 @@ const sameSecret = (given: string, expected: string) => {
 export default defineLogicFunction({
   universalIdentifier: SOURCE_TOKEN_FUNCTION_UNIVERSAL_IDENTIFIER,
   name: 'source-token',
-  description: "Returns the workspace HubSpot access token to Shuttio",
+  description: 'Returns the workspace HubSpot, Attio or Pipedrive access token to Shuttio',
   timeoutSeconds: 15,
   httpRouteTriggerSettings: {
     path: SOURCE_TOKEN_ROUTE,
@@ -40,33 +41,39 @@ export default defineLogicFunction({
       return new Response({ code: 'forbidden', message: 'Missing or wrong source secret.' }, { status: 403 });
     }
 
-    if (event.queryStringParameters.provider !== 'hubspot') {
-      return new Response({ code: 'bad_provider', message: 'Only provider=hubspot is supported.' }, { status: 400 });
+    const provider = event.queryStringParameters.provider;
+    if (!isSourceProvider(provider)) {
+      return new Response({ code: 'bad_provider', message: 'provider must be hubspot, attio or pipedrive.' }, { status: 400 });
     }
+    const label = SOURCE_LABELS[provider];
 
-    const { usable, failed } = await findHubspotConnection();
+    const { usable, failed } = await findSourceConnection(provider);
     if (!usable) {
       return new Response(
         {
           code: failed ? 'reconnect_required' : 'not_connected',
           message: failed
-            ? 'The HubSpot connection in Twenty needs a reconnect.'
-            : 'This workspace has no HubSpot connection.',
+            ? `The ${label} connection in Twenty needs a reconnect.`
+            : `This workspace has no ${label} connection.`,
         },
         { status: 409 },
       );
     }
 
+    // Only HubSpot describes its token's life; for Attio (no expiry) and Pipedrive (Twenty
+    // refreshes) Shuttio keeps an answer a few minutes and asks again.
     let expiresAt: string | null = null;
     let hubId: number | null = null;
-    try {
-      const info = await readHubspotTokenInfo(usable.accessToken);
-      hubId = info.hubId;
-      if (info.expiresInSeconds !== null) {
-        expiresAt = new Date(Date.now() + info.expiresInSeconds * 1000).toISOString();
+    if (provider === 'hubspot') {
+      try {
+        const info = await readHubspotTokenInfo(usable.accessToken);
+        hubId = info.hubId;
+        if (info.expiresInSeconds !== null) {
+          expiresAt = new Date(Date.now() + info.expiresInSeconds * 1000).toISOString();
+        }
+      } catch {
+        // The token itself is still the best answer; Shuttio asks again on a 401.
       }
-    } catch {
-      // The token itself is still the best answer; Shuttio asks again on a 401.
     }
 
     return new Response(

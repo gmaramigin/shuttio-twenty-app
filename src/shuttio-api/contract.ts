@@ -11,7 +11,8 @@ export const SHUTTIO_API_PREFIX = '/api/twenty-app/v1';
 export const PROXY_ROUTE_PREFIX = '/shuttio/api';
 export const PROXY_ROUTE_PATTERN = `${PROXY_ROUTE_PREFIX}/*path`;
 export const SOURCE_TOKEN_ROUTE = '/shuttio/source-token';
-export const HUBSPOT_STATUS_ROUTE = '/shuttio/hubspot-status';
+// `?provider=hubspot|attio|pipedrive`; the route kept its 2.0.0 name.
+export const SOURCE_STATUS_ROUTE = '/shuttio/hubspot-status';
 
 // Header Shuttio sends back when it asks for a source token. The value is the
 // secret the proxy handed over in `POST migrations/:id/source`.
@@ -19,7 +20,19 @@ export const SOURCE_SECRET_HEADER = 'x-shuttio-source-secret';
 // Header the proxy adds so Shuttio knows which Twenty API validates the token.
 export const TWENTY_API_URL_HEADER = 'x-twenty-api-url';
 
-export type SourceProvider = 'hubspot';
+export type SourceProvider = 'hubspot' | 'attio' | 'pipedrive';
+
+export const SOURCE_PROVIDERS: readonly SourceProvider[] = ['hubspot', 'attio', 'pipedrive'];
+
+export const SOURCE_LABELS: Record<SourceProvider, string> = {
+  hubspot: 'HubSpot',
+  attio: 'Attio',
+  pipedrive: 'Pipedrive',
+};
+
+export const isSourceProvider = (value: unknown): value is SourceProvider =>
+  typeof value === 'string' && (SOURCE_PROVIDERS as readonly string[]).includes(value);
+
 
 export type MigrationSummary = {
   id: string;

@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.1.0
+
+- Attio and Pipedrive as sources next to HubSpot: the page picks the source; `source-token` and the status route take `provider=hubspot|attio|pipedrive`.
+- Attio and Pipedrive connection providers (workspace-shared, scopes fixed on each provider's app). Optional server variables `ATTIO_CLIENT_ID`/`ATTIO_CLIENT_SECRET` and `PIPEDRIVE_CLIENT_ID`/`PIPEDRIVE_CLIENT_SECRET`.
+- `attio-identify-account` and `pipedrive-identify-account` pin a connection to one workspace or company.
+
 ## 2.0.0
 
 - New page **Import with Shuttio** in the left menu: link Shuttio, connect HubSpot, review fields, free sample, pay, full migration and rollback, built from Twenty UI.

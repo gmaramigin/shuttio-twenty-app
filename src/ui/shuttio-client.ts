@@ -1,6 +1,7 @@
 import { RestApiClient, RestApiClientError } from 'twenty-client-sdk/rest';
 
-import { HUBSPOT_STATUS_ROUTE, PROXY_ROUTE_PREFIX } from 'src/shuttio-api/contract';
+import { PROXY_ROUTE_PREFIX, SOURCE_STATUS_ROUTE } from 'src/shuttio-api/contract';
+import type { SourceProvider } from 'src/shuttio-api/contract';
 
 export type CallResult<T> =
   | { ok: true; data: T }
@@ -49,5 +50,5 @@ export const shuttio = {
     run<T>((client) => client.put(proxyPath(path), body)),
 };
 
-export const getHubspotStatus = <T>() =>
-  run<T>((client) => client.get(`/s${HUBSPOT_STATUS_ROUTE}`));
+export const getSourceStatus = <T>(provider: SourceProvider) =>
+  run<T>((client) => client.get(`/s${SOURCE_STATUS_ROUTE}?provider=${provider}`));

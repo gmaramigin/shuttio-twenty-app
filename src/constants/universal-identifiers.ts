@@ -1,6 +1,6 @@
 export const APP_DISPLAY_NAME = 'Shuttio';
 export const APP_DESCRIPTION =
-  'Move HubSpot data into Twenty from a page inside your workspace: companies, people, deals, custom objects, notes and tasks, with the links between them.';
+  'Move HubSpot, Attio or Pipedrive data into Twenty from a page inside your workspace: companies, people, deals, custom objects, notes and tasks, with the links between them.';
 export const APPLICATION_UNIVERSAL_IDENTIFIER = 'ec2186f5-bd22-4817-ba34-09453cb26edf';
 export const DEFAULT_ROLE_UNIVERSAL_IDENTIFIER = 'c24420b8-062e-4cee-bb33-253c8e05a1aa';
 export const IMPORT_FRONT_COMPONENT_UNIVERSAL_IDENTIFIER =
@@ -35,5 +35,15 @@ export const IMPORT_PAGE_NAVIGATION_ITEM_UNIVERSAL_IDENTIFIER =
   'd55ce5e4-90ab-4d75-9df2-7022995cafe7';
 export const IMPORT_PAGE_FRONT_COMPONENT_UNIVERSAL_IDENTIFIER =
   '4588797a-94fb-49d8-b9f3-c4ed4f98767b';
+
+// 2.1.0: Attio and Pipedrive as sources.
+export const ATTIO_CONNECTION_PROVIDER_UNIVERSAL_IDENTIFIER =
+  '134a1408-196e-455d-a2e6-d5f81b47f19f';
+export const ATTIO_IDENTIFY_ACCOUNT_FUNCTION_UNIVERSAL_IDENTIFIER =
+  '6c0afefb-a3ec-4dec-ad87-0a0b41024272';
+export const PIPEDRIVE_CONNECTION_PROVIDER_UNIVERSAL_IDENTIFIER =
+  'd320c4ff-cc83-43c8-9439-27780061ef26';
+export const PIPEDRIVE_IDENTIFY_ACCOUNT_FUNCTION_UNIVERSAL_IDENTIFIER =
+  'd9f36d33-2c30-4411-948a-e06bdbe3a63c';
 
 export const IMPORT_PAGE_NAME = 'Import with Shuttio';

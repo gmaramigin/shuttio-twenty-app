@@ -19,7 +19,7 @@ import {
   IMPORT_PAGE_FRONT_COMPONENT_UNIVERSAL_IDENTIFIER,
   IMPORT_PAGE_NAME,
 } from 'src/constants/universal-identifiers';
-import { isRunning } from 'src/shuttio-api/contract';
+import { isRunning, SOURCE_LABELS, SOURCE_PROVIDERS } from 'src/shuttio-api/contract';
 import type {
   CheckoutResponse,
   CreateMigrationResponse,
@@ -28,15 +28,16 @@ import type {
   MappingResponse,
   MigrationDetail,
   PriceOffer,
+  SourceProvider,
   SaveMappingRequest,
   StatusResponse,
 } from 'src/shuttio-api/contract';
 import { MappingTable } from 'src/ui/mapping-table';
 import { RunProgress } from 'src/ui/run-progress';
-import { getHubspotStatus, shuttio } from 'src/ui/shuttio-client';
+import { getSourceStatus, shuttio } from 'src/ui/shuttio-client';
 import type { CallResult } from 'src/ui/shuttio-client';
 
-type HubspotStatus = {
+type SourceStatus = {
   connected: boolean;
   handle: string | null;
   needsReconnect: boolean;
@@ -45,11 +46,11 @@ type HubspotStatus = {
 
 type Failure = { title: string; message: string };
 
-type StepKey = 'link' | 'hubspot' | 'fields' | 'sample' | 'pay' | 'full';
+type StepKey = 'link' | 'source' | 'fields' | 'sample' | 'pay' | 'full';
 
-const STEPS: { key: StepKey; title: string }[] = [
+const stepsFor = (label: string): { key: StepKey; title: string }[] => [
   { key: 'link', title: 'Link your Shuttio account' },
-  { key: 'hubspot', title: 'Connect HubSpot' },
+  { key: 'source', title: `Connect ${label}` },
   { key: 'fields', title: 'Review fields' },
   { key: 'sample', title: 'Free sample' },
   { key: 'pay', title: 'Pay' },
@@ -61,18 +62,29 @@ const POLL_MS = 5_000;
 const failureOf = (title: string, result: CallResult<unknown>): Failure | null =>
   result.ok ? null : { title, message: result.message };
 
-const latestHubspotMigration = (status: StatusResponse) =>
+const latestMigration = (status: StatusResponse, source: SourceProvider) =>
   [...status.migrations]
-    .filter((migration) => migration.source === 'hubspot' && migration.status !== 'rolled_back')
+    .filter((migration) => migration.source === source && migration.status !== 'rolled_back')
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0] ?? null;
+
+// The link page makes a migration of the chosen source.
+const withSource = (link: string, source: SourceProvider) => {
+  try {
+    const url = new URL(link);
+    url.searchParams.set('source', source);
+    return url.toString();
+  } catch {
+    return link;
+  }
+};
 
 const usd = (amount: number) =>
   amount.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
 
-const priceNote = (offer: PriceOffer | undefined) => {
+const priceNote = (offer: PriceOffer | undefined, label: string) => {
   switch (offer) {
     case 'count_failed':
-      return 'Shuttio could not count the records in HubSpot. Run the sample again or write to help@shuttio.com.';
+      return `Shuttio could not count the records in ${label}. Run the sample again or write to help@shuttio.com.`;
     case 'free':
       return 'The full migration is free.';
     case 'custom':
@@ -80,7 +92,7 @@ const priceNote = (offer: PriceOffer | undefined) => {
     case 'unconfigured':
       return 'Payment is not available right now. Write to help@shuttio.com.';
     default:
-      return 'Shuttio is still counting the records in HubSpot. The price appears when the count is done.';
+      return `Shuttio is still counting the records in ${label}. The price appears when the count is done.`;
   }
 };
 
@@ -92,7 +104,12 @@ const ImportPage = () => {
   const [failure, setFailure] = useState<Failure | null>(null);
   const [linkUrl, setLinkUrl] = useState<string | null>(null);
   const [status, setStatus] = useState<StatusResponse | null>(null);
-  const [hubspot, setHubspot] = useState<HubspotStatus | null>(null);
+  const [source, setSource] = useState<SourceProvider>('hubspot');
+  const [connection, setConnection] = useState<SourceStatus | null>(null);
+  // Set when Shuttio has no unstarted migration of this source: linking again makes one.
+  const [relinkUrl, setRelinkUrl] = useState<string | null>(null);
+  const label = SOURCE_LABELS[source];
+  const STEPS = stepsFor(label);
   const [detail, setDetail] = useState<MigrationDetail | null>(null);
   const [mapping, setMapping] = useState<MappingObject[] | null>(null);
   const [mappingDirty, setMappingDirty] = useState(false);
@@ -122,12 +139,12 @@ const ImportPage = () => {
     const result = await shuttio.get<MappingResponse>(`migrations/${migrationId}/mapping`);
     if (!mounted.current) return;
     if (!result.ok) {
-      setFailure(failureOf('Could not read the fields from HubSpot', result));
+      setFailure(failureOf(`Could not read the fields from ${SOURCE_LABELS[source]}`, result));
       return;
     }
     setMapping(result.data.objects);
     setMappingDirty(false);
-  }, []);
+  }, [source]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -150,15 +167,16 @@ const ImportPage = () => {
     setStatus(statusResult.data);
     setLinkUrl(statusResult.data.linkUrl ?? null);
 
-    const [hubspotResult] = await Promise.all([getHubspotStatus<HubspotStatus>()]);
+    setRelinkUrl(null);
+    const connectionResult = await getSourceStatus<SourceStatus>(source);
     if (!mounted.current) return;
-    if (hubspotResult.ok) {
-      setHubspot(hubspotResult.data);
+    if (connectionResult.ok) {
+      setConnection(connectionResult.data);
     } else {
-      setFailure(failureOf('Could not check the HubSpot connection', hubspotResult));
+      setFailure(failureOf(`Could not check the ${SOURCE_LABELS[source]} connection`, connectionResult));
     }
 
-    const current = latestHubspotMigration(statusResult.data);
+    const current = latestMigration(statusResult.data, source);
     if (current) {
       const loaded = await loadDetail(current.id);
       if (loaded && loaded.sourceConnected && !isRunning(loaded.status) && !loaded.paid) {
@@ -169,7 +187,7 @@ const ImportPage = () => {
       setMapping(null);
     }
     if (mounted.current) setLoading(false);
-  }, [loadDetail, loadMapping]);
+  }, [loadDetail, loadMapping, source]);
 
   useEffect(() => {
     void load();
@@ -198,12 +216,20 @@ const ImportPage = () => {
   };
 
   const startMigration = async () => {
-    const created = await act('start', 'Could not start a migration', () =>
-      shuttio.post<CreateMigrationResponse>('migrations', { source: 'hubspot' }),
-    );
-    if (!created) return;
-    const attached = await act('start', 'Shuttio could not read HubSpot', () =>
-      shuttio.post<unknown>(`migrations/${created.id}/source`, { provider: 'hubspot' }),
+    setBusy('start');
+    setFailure(null);
+    const result = await shuttio.post<CreateMigrationResponse>('migrations', { source });
+    if (!mounted.current) return;
+    setBusy(null);
+    if (!result.ok) {
+      // Each migration connects Twenty once: Shuttio answers with a link that makes one of this source.
+      if (result.code === 'link_required' && result.linkUrl) setRelinkUrl(result.linkUrl);
+      else setFailure(failureOf('Could not start a migration', result));
+      return;
+    }
+    const created = result.data;
+    const attached = await act('start', `Shuttio could not read ${label}`, () =>
+      shuttio.post<unknown>(`migrations/${created.id}/source`, { provider: source }),
     );
     if (attached === null) {
       await loadDetail(created.id);
@@ -259,7 +285,7 @@ const ImportPage = () => {
     const answer = await openCommandConfirmationModal({
       title: 'Run the full migration?',
       subtitle:
-        'Shuttio moves every remaining HubSpot record into this workspace. Records the sample created are matched, not duplicated.',
+        `Shuttio moves every remaining ${label} record into this workspace. Records the sample created are matched, not duplicated.`,
       confirmButtonText: 'Run full migration',
       confirmButtonAccent: 'blue',
     });
@@ -287,8 +313,8 @@ const ImportPage = () => {
   };
 
   const openAppSettings = async () => {
-    if (!hubspot?.applicationId) return;
-    await navigate(AppPath.SettingsCatchAll, { '*': `applications/${hubspot.applicationId}` });
+    if (!connection?.applicationId) return;
+    await navigate(AppPath.SettingsCatchAll, { '*': `applications/${connection.applicationId}` });
   };
 
   const changeTarget = (sourceObject: string, sourceField: string, target: FieldTarget) => {
@@ -328,13 +354,13 @@ const ImportPage = () => {
 
   // Which steps are finished, from what Shuttio and Twenty report.
   const linked = status?.linked === true;
-  const hubspotReady = hubspot?.connected === true && detail?.sourceConnected === true;
+  const sourceReady = connection?.connected === true && detail?.sourceConnected === true;
   const sampleDone =
     detail !== null &&
     (detail.paid || detail.status === 'sample_done' || (!detail.isSample && detail.status !== 'setup'));
   const done: Record<StepKey, boolean> = {
     link: linked,
-    hubspot: hubspotReady,
+    source: sourceReady,
     fields: detail?.mappingSaved === true && !mappingDirty,
     sample: sampleDone,
     pay: detail?.paid === true,
@@ -356,7 +382,7 @@ const ImportPage = () => {
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: theme.spacing['2'] }}>
               {linkUrl ? (
                 <MainButton
-                  href={linkUrl}
+                  href={withSource(linkUrl, source)}
                   target="_blank"
                   rel="noopener noreferrer"
                   endIcon={<IconExternalLink size={16} />}
@@ -373,20 +399,20 @@ const ImportPage = () => {
           </>
         );
 
-      case 'hubspot':
-        if (!hubspot?.connected) {
+      case 'source':
+        if (!connection?.connected) {
           return (
             <>
               <Text>
-                {hubspot?.needsReconnect
-                  ? `The HubSpot connection${hubspot.handle ? ` (${hubspot.handle})` : ''} stopped working. Reconnect it in the Shuttio app settings.`
-                  : 'Connect the HubSpot account to import from. Open Settings → Apps → Shuttio and click Add connection in the HubSpot section. HubSpot asks a super admin to approve read access.'}
+                {connection?.needsReconnect
+                  ? `The ${label} connection${connection.handle ? ` (${connection.handle})` : ''} stopped working. Reconnect it in the Shuttio app settings.`
+                  : `Connect the ${label} account to import from. Open Settings → Apps → Shuttio and click Add connection in the ${label} section.${source === 'hubspot' ? ' HubSpot asks a super admin to approve read access.' : ''}`}
               </Text>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: theme.spacing['2'] }}>
                 <MainButton
                   startIcon={<IconSettings size={16} />}
                   onClick={() => void openAppSettings()}
-                  disabled={!hubspot?.applicationId}
+                  disabled={!connection?.applicationId}
                 >
                   Open Shuttio settings
                 </MainButton>
@@ -400,33 +426,50 @@ const ImportPage = () => {
         return (
           <>
             <Text>
-              HubSpot is connected{hubspot.handle ? ` as ${hubspot.handle}` : ''}. Shuttio reads the
-              portal’s objects and fields next. Nothing is written yet.
+              {label} is connected{connection.handle ? ` as ${connection.handle}` : ''}. Shuttio reads its
+              objects and fields next. Nothing is written yet.
             </Text>
-            <div>
-              <MainButton onClick={() => void startMigration()} loading={busy === 'start'} disabled={busy !== null}>
-                Read HubSpot
-              </MainButton>
-            </div>
+            {relinkUrl ? (
+              <>
+                <Text>
+                  Each migration connects Twenty once. Open Shuttio to set up the {label} migration,
+                  then come back and press Read {label} again.
+                </Text>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: theme.spacing['2'] }}>
+                  <MainButton href={relinkUrl} target="_blank" rel="noopener noreferrer" endIcon={<IconExternalLink size={16} />}>
+                    Open Shuttio
+                  </MainButton>
+                  <LightButton onClick={() => void startMigration()} loading={busy === 'start'} disabled={busy !== null}>
+                    Read {label}
+                  </LightButton>
+                </div>
+              </>
+            ) : (
+              <div>
+                <MainButton onClick={() => void startMigration()} loading={busy === 'start'} disabled={busy !== null}>
+                  Read {label}
+                </MainButton>
+              </div>
+            )}
           </>
         );
 
       case 'fields':
         if (!detail?.sourceConnected) {
-          return <Text>Connect HubSpot first.</Text>;
+          return <Text>Connect {label} first.</Text>;
         }
         if (mapping === null) {
           return (
             <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing['2'] }}>
               <Loader />
-              <Text>Reading fields from HubSpot…</Text>
+              <Text>Reading fields from {label}…</Text>
             </div>
           );
         }
         return (
           <>
             <Text>
-              Choose where each HubSpot field lands in Twenty. “New field” adds it to Twenty; “Skip”
+              Choose where each {label} field lands in Twenty. “New field” adds it to Twenty; “Skip”
               leaves it out. People match by email and companies by domain, so records already here
               are linked, not duplicated.
             </Text>
@@ -489,8 +532,8 @@ const ImportPage = () => {
           <>
             <Text>
               {price
-                ? `${price.recordCount !== null ? `${price.recordCount.toLocaleString('en-US')} records in HubSpot. ` : ''}The full migration costs ${usd(price.amountUsd)}, paid once.`
-                : priceNote(detail.offer)}
+                ? `${price.recordCount !== null ? `${price.recordCount.toLocaleString('en-US')} records in ${label}. ` : ''}The full migration costs ${usd(price.amountUsd)}, paid once.`
+                : priceNote(detail.offer, label)}
             </Text>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: theme.spacing['2'] }}>
               {checkoutUrl ? (
@@ -580,8 +623,33 @@ const ImportPage = () => {
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: theme.spacing['1'] }}>
           <Heading level={1} size="lg">
-            Import from HubSpot
+            Import from {label}
           </Heading>
+          <div role="group" aria-label="Source" style={{ display: 'flex', flexWrap: 'wrap', gap: theme.spacing['2'] }}>
+            {SOURCE_PROVIDERS.map((provider) =>
+              provider === source ? (
+                <MainButton key={provider} size="sm" aria-pressed>
+                  {SOURCE_LABELS[provider]}
+                </MainButton>
+              ) : (
+                <LightButton
+                  key={provider}
+                  size="sm"
+                  aria-pressed={false}
+                  disabled={busy !== null}
+                  onClick={() => {
+                    setDetail(null);
+                    setMapping(null);
+                    setConnection(null);
+                    setOpenStep(null);
+                    setSource(provider);
+                  }}
+                >
+                  {SOURCE_LABELS[provider]}
+                </LightButton>
+              ),
+            )}
+          </div>
           <Text style={{ color: theme.font.color.secondary }}>
             Shuttio copies companies, contacts, deals, custom objects, notes and tasks into this
             workspace, with the links between them.
@@ -683,6 +751,6 @@ const ImportPage = () => {
 export default defineFrontComponent({
   universalIdentifier: IMPORT_PAGE_FRONT_COMPONENT_UNIVERSAL_IDENTIFIER,
   name: 'import-page',
-  description: `${IMPORT_PAGE_NAME}: link Shuttio, connect HubSpot, map fields, run a sample, pay, migrate`,
+  description: `${IMPORT_PAGE_NAME}: link Shuttio, connect HubSpot, Attio or Pipedrive, map fields, run a sample, pay, migrate`,
   component: ImportPage,
 });

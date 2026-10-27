@@ -12,8 +12,10 @@ export default defineApplication({
   universalIdentifier: APPLICATION_UNIVERSAL_IDENTIFIER,
   displayName: APP_DISPLAY_NAME,
   description: APP_DESCRIPTION,
-  // The owner's HubSpot app, entered once under Settings > Developers > Shuttio >
-  // Config. Same values as Shuttio's HUBSPOT_CLIENT_ID / HUBSPOT_CLIENT_SECRET.
+  // The owner's source apps, entered once under Settings > Developers > Shuttio > Config.
+  // HubSpot: same values as Shuttio's HubSpot app. Attio: Shuttio's Attio app (its redirect
+  // URLs include Twenty's callback). Pipedrive: a Pipedrive app of its own, since Pipedrive
+  // allows one callback URL per app. Optional: a source without them cannot be connected.
   serverVariables: {
     HUBSPOT_CLIENT_ID: {
       description: 'Client ID of the Shuttio HubSpot app',
@@ -24,6 +26,26 @@ export default defineApplication({
       description: 'Client secret of the Shuttio HubSpot app',
       isSecret: true,
       isRequired: true,
+    },
+    ATTIO_CLIENT_ID: {
+      description: 'Client ID of the Shuttio Attio app',
+      isSecret: false,
+      isRequired: false,
+    },
+    ATTIO_CLIENT_SECRET: {
+      description: 'Client secret of the Shuttio Attio app',
+      isSecret: true,
+      isRequired: false,
+    },
+    PIPEDRIVE_CLIENT_ID: {
+      description: 'Client ID of the Shuttio Pipedrive app for Twenty',
+      isSecret: false,
+      isRequired: false,
+    },
+    PIPEDRIVE_CLIENT_SECRET: {
+      description: 'Client secret of the Shuttio Pipedrive app for Twenty',
+      isSecret: true,
+      isRequired: false,
     },
   },
   applicationVariables: {

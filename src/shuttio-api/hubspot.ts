@@ -1,5 +1,4 @@
-import { listConnections } from 'twenty-sdk/logic-function';
-import type { AppConnection } from 'twenty-sdk/logic-function';
+import { findSourceConnection } from 'src/shuttio-api/sources';
 
 export const HUBSPOT_PROVIDER_NAME = 'hubspot';
 
@@ -34,14 +33,4 @@ export const readHubspotTokenInfo = async (accessToken: string): Promise<Hubspot
 };
 
 // The workspace's HubSpot connection: the first shared one that still works.
-export const findHubspotConnection = async (): Promise<{
-  usable: AppConnection | null;
-  failed: AppConnection | null;
-}> => {
-  const connections = await listConnections({ providerName: HUBSPOT_PROVIDER_NAME });
-  const shared = connections.filter((connection) => connection.scope === 'WORKSPACE');
-  return {
-    usable: shared.find((connection) => !connection.authFailedAt) ?? null,
-    failed: shared.find((connection) => connection.authFailedAt) ?? null,
-  };
-};
+export const findHubspotConnection = () => findSourceConnection('hubspot');

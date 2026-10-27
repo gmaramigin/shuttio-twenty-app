@@ -2,16 +2,18 @@
 
 Adds an **Import with Shuttio** page to the left menu of your Twenty workspace. From that page you move your HubSpot data into Twenty: link a Shuttio account, connect HubSpot, review the field mapping, check a free sample, pay, and run the full migration. The command **Import data with Shuttio** (Cmd+K) opens the same page.
 
-HubSpot is the first source on this page. Pipedrive, Affinity, Attio, another Twenty workspace and CSV files still go through https://www.shuttio.com with Twenty as the destination.
+The page reads HubSpot, Attio or Pipedrive: pick the source at the top. Affinity, Salesforce, another Twenty workspace and CSV files still go through https://www.shuttio.com with Twenty as the destination.
 
 ## Setup
 
 **App owner, once per Twenty server.** In Twenty, open Settings → Developers → Shuttio → Config and fill in `HUBSPOT_CLIENT_ID` and `HUBSPOT_CLIENT_SECRET`: the client ID and secret of the Shuttio HubSpot app. The HubSpot app must list `https://api.twenty.com/auth/apps/callback` (Twenty Cloud) as a redirect URL.
 
+For Attio, fill in `ATTIO_CLIENT_ID` and `ATTIO_CLIENT_SECRET` (the Shuttio Attio app, with the same callback added to its redirect URLs). For Pipedrive, fill in `PIPEDRIVE_CLIENT_ID` and `PIPEDRIVE_CLIENT_SECRET` of a separate Pipedrive app whose callback URL is `https://api.twenty.com/auth/apps/callback`: Pipedrive allows one callback URL per app. A source without its variables cannot be connected; the others still work.
+
 **Workspace admin, once per workspace.**
 
 1. Install Shuttio from Settings → Apps.
-2. Open Settings → Apps → Shuttio and click **Add connection** in the HubSpot section. A HubSpot super admin approves read access.
+2. Open Settings → Apps → Shuttio and click **Add connection** in the HubSpot, Attio or Pipedrive section. HubSpot asks a super admin to approve read access.
 3. Open **Import with Shuttio** in the left menu and follow the six steps.
 
 Step 1 opens Shuttio in a new tab: you sign in to Shuttio and connect this workspace there with Twenty's OAuth. Use an admin account: Shuttio adds custom fields, options and objects.

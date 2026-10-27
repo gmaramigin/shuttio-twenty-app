@@ -3,6 +3,7 @@ import type { RoutePayload } from 'twenty-sdk/logic-function';
 
 import {
   ALLOWED_PROXY_PATHS,
+  isSourceProvider,
   SHUTTIO_API_PREFIX,
   SHUTTIO_DEFAULT_BASE_URL,
   TWENTY_API_URL_HEADER,
@@ -57,7 +58,7 @@ const randomSecret = () => {
 };
 
 // One secret per workspace, kept in the app's key-value store. Shuttio gets it when
-// a source is attached and must send it back to read the HubSpot token.
+// a source is attached and must send it back to read the source token.
 export const getOrCreateSourceSecret = async (): Promise<string> => {
   const existing = await kv.get<string>(SOURCE_SECRET_KV_KEY);
   if (typeof existing === 'string' && existing.length >= 32) return existing;
@@ -93,8 +94,8 @@ export const proxyToShuttio = async (method: Method, event: RoutePayload) => {
   if (method === 'POST' && path.endsWith('/source')) {
     const functionsUrl = process.env.TWENTY_FUNCTIONS_URL || `${apiUrl}/s`;
     const provider = (body as { provider?: unknown }).provider;
-    if (provider !== 'hubspot') {
-      return errorResponse(400, 'bad_provider', 'Only HubSpot is supported.');
+    if (!isSourceProvider(provider)) {
+      return errorResponse(400, 'bad_provider', 'The source must be HubSpot, Attio or Pipedrive.');
     }
     body = { provider, functionsUrl, sourceTokenSecret: await getOrCreateSourceSecret() };
   }
