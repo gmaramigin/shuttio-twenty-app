@@ -119,7 +119,7 @@ export const MappingTable = ({
                     (typeof object.recordCount === 'number'
                       ? ` · ${object.recordCount.toLocaleString('en-US')} records`
                       : '')
-                  : 'Not imported'
+                  : object.note ?? 'Not imported'
               }
               actions={
                 <label

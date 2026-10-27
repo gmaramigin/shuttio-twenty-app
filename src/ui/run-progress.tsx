@@ -1,3 +1,4 @@
+import { AppPath, navigate } from 'twenty-sdk/front-component';
 import { MainButton } from 'twenty-ui/components/input';
 import { IconExternalLink } from 'twenty-ui/icon';
 import { ProgressBar } from 'twenty-ui/primitives/feedback';
@@ -10,6 +11,9 @@ const percent = (done: number, failed: number, total: number | null) =>
   total && total > 0 ? Math.min(100, Math.round(((done + failed) / total) * 100)) : 0;
 
 const count = (value: number) => value.toLocaleString('en-US');
+
+// Shuttio sends a path inside Twenty (/object/<name>/<id>) when it does not know the workspace address.
+const RECORD_PATH = /^\/object\/([A-Za-z0-9_]+)\/([0-9a-f-]{36})$/;
 
 export const RunProgress = ({ detail }: { detail: MigrationDetail }) => {
   const theme = useTheme();
@@ -43,6 +47,8 @@ export const RunProgress = ({ detail }: { detail: MigrationDetail }) => {
         </div>
       ))}
 
+      {detail.error && <Text style={{ color: theme.font.color.danger }}>{detail.error}</Text>}
+
       {detail.errors.length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: theme.spacing['1'] }}>
           <Text style={{ fontWeight: theme.font.weight.medium }}>Records that did not import</Text>
@@ -56,19 +62,36 @@ export const RunProgress = ({ detail }: { detail: MigrationDetail }) => {
 
       {(detail.links.length > 0 || detail.resultsUrl) && (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: theme.spacing['2'] }}>
-          {detail.links.slice(0, 6).map((link) => (
-            <MainButton
-              key={link.url}
-              variant="outline"
-              size="sm"
-              href={link.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              endIcon={<IconExternalLink size={14} />}
-            >
-              {link.label}
-            </MainButton>
-          ))}
+          {detail.links.slice(0, 6).map((link) => {
+            const inTwenty = RECORD_PATH.exec(link.url);
+            return inTwenty ? (
+              <MainButton
+                key={link.url}
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  void navigate(AppPath.RecordShowPage, {
+                    objectNameSingular: inTwenty[1],
+                    objectRecordId: inTwenty[2],
+                  })
+                }
+              >
+                {link.label}
+              </MainButton>
+            ) : (
+              <MainButton
+                key={link.url}
+                variant="outline"
+                size="sm"
+                href={link.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                endIcon={<IconExternalLink size={14} />}
+              >
+                {link.label}
+              </MainButton>
+            );
+          })}
           {detail.resultsUrl && (
             <MainButton
               variant="ghost"

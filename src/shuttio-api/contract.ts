@@ -72,6 +72,8 @@ export type MappingObject = {
   destinationFields: DestinationField[];
   // source field name -> target
   mapping: Record<string, FieldTarget>;
+  // Why the object cannot be moved or read, else null.
+  note?: string | null;
 };
 
 // `GET migrations/:id/mapping`
@@ -106,7 +108,11 @@ export type ObjectProgress = {
   status: string;
 };
 
+// `url` is absolute, or a path inside Twenty such as /object/person/<id>.
 export type RecordLink = { label: string; url: string };
+
+// Why `price` is what it is.
+export type PriceOffer = 'counting' | 'count_failed' | 'free' | 'paid' | 'custom' | 'unconfigured';
 
 // `GET migrations/:id`
 export type MigrationDetail = {
@@ -122,9 +128,12 @@ export type MigrationDetail = {
   errors: { object: string; message: string; count: number }[];
   links: RecordLink[];
   resultsUrl?: string;
+  offer?: PriceOffer;
+  error?: string | null;
 };
 
-export type CheckoutResponse = { url: string };
+// `url` is null when nothing is owed: Shuttio then starts the full run itself.
+export type CheckoutResponse = { url: string | null; started?: boolean };
 
 export const isRunning = (status: MigrationStatus) =>
   status === 'sample_running' || status === 'running' || status === 'rolling_back';

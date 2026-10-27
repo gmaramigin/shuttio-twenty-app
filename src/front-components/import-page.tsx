@@ -27,6 +27,7 @@ import type {
   MappingObject,
   MappingResponse,
   MigrationDetail,
+  PriceOffer,
   SaveMappingRequest,
   StatusResponse,
 } from 'src/shuttio-api/contract';
@@ -67,6 +68,21 @@ const latestHubspotMigration = (status: StatusResponse) =>
 
 const usd = (amount: number) =>
   amount.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
+
+const priceNote = (offer: PriceOffer | undefined) => {
+  switch (offer) {
+    case 'count_failed':
+      return 'Shuttio could not count the records in HubSpot. Run the sample again or write to help@shuttio.com.';
+    case 'free':
+      return 'The full migration is free.';
+    case 'custom':
+      return 'Over 5,000,000 records: write to help@shuttio.com for a price.';
+    case 'unconfigured':
+      return 'Payment is not available right now. Write to help@shuttio.com.';
+    default:
+      return 'Shuttio is still counting the records in HubSpot. The price appears when the count is done.';
+  }
+};
 
 const ImportPage = () => {
   const theme = useTheme();
@@ -229,7 +245,13 @@ const ImportPage = () => {
     const checkout = await act('checkout', 'Could not open Stripe Checkout', () =>
       shuttio.post<CheckoutResponse>(`migrations/${detail.id}/checkout`),
     );
-    if (checkout) setCheckoutUrl(checkout.url);
+    if (!checkout) return;
+    if (checkout.url) {
+      setCheckoutUrl(checkout.url);
+      return;
+    }
+    await enqueueSnackbar({ message: 'Nothing to pay: the full migration has started', variant: 'success' });
+    await loadDetail(detail.id);
   };
 
   const runFull = async () => {
@@ -280,13 +302,28 @@ const ImportPage = () => {
     setMappingDirty(true);
   };
 
-  const toggleObject = (sourceObject: string, included: boolean) => {
-    setMapping((objects) =>
-      (objects ?? []).map((object) =>
-        object.sourceObject === sourceObject ? { ...object, included } : object,
-      ),
+  const toggleObject = async (sourceObject: string, included: boolean) => {
+    const next = (mapping ?? []).map((object) =>
+      object.sourceObject === sourceObject ? { ...object, included } : object,
     );
+    setMapping(next);
     setMappingDirty(true);
+    // Shuttio sends no fields for an object that is not ticked: save the tick, then read them.
+    const target = next.find((object) => object.sourceObject === sourceObject);
+    if (!detail || !included || !target || target.sourceFields.length > 0) return;
+    const body: SaveMappingRequest = {
+      objects: next.map((object) => ({
+        sourceObject: object.sourceObject,
+        included: object.included,
+        mapping: object.mapping,
+      })),
+    };
+    const saved = await act('save', 'Could not read the fields of this object', () =>
+      shuttio.put<unknown>(`migrations/${detail.id}/mapping`, body),
+    );
+    if (saved === null) return;
+    setMappingDirty(false);
+    await loadMapping(detail.id);
   };
 
   // Which steps are finished, from what Shuttio and Twenty report.
@@ -396,7 +433,7 @@ const ImportPage = () => {
             <MappingTable
               objects={mapping}
               disabled={busy !== null || (detail !== null && isRunning(detail.status))}
-              onToggleObject={toggleObject}
+              onToggleObject={(sourceObject, included) => void toggleObject(sourceObject, included)}
               onChangeTarget={changeTarget}
             />
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: theme.spacing['2'] }}>
@@ -453,7 +490,7 @@ const ImportPage = () => {
             <Text>
               {price
                 ? `${price.recordCount !== null ? `${price.recordCount.toLocaleString('en-US')} records in HubSpot. ` : ''}The full migration costs ${usd(price.amountUsd)}, paid once.`
-                : 'Shuttio is still counting the records in HubSpot. The price appears when the count is done.'}
+                : priceNote(detail.offer)}
             </Text>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: theme.spacing['2'] }}>
               {checkoutUrl ? (
