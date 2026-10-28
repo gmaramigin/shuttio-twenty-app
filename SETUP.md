@@ -42,6 +42,10 @@ Follow these steps to get your app running locally.
 - `yarn test:unit` - Run unit tests
 - `yarn test` - Run integration tests
 
+## The Shuttio API
+
+The page talks to Shuttio only through the app's logic functions. Paths, request bodies and response types live in `src/shuttio-api/contract.ts`; the Shuttio side documents the same contract in `docs/twenty-app-api.md` of the Shuttio repo. Change both together.
+
 ## Troubleshooting
 
 See the [troubleshooting guide](https://docs.twenty.com/developers/extend/apps/getting-started/troubleshooting) or ask on [Discord](https://discord.gg/cx5n4Jzs57).

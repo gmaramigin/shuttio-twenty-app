@@ -1,54 +1,55 @@
+import { MetadataApiClient } from 'twenty-client-sdk/metadata';
 import { defineFrontComponent } from 'twenty-sdk/define';
-import { MainButton } from 'twenty-ui/components/input';
-import { IconExternalLink } from 'twenty-ui/icon';
-import { useTheme } from 'twenty-ui/theme';
-import { Heading, Text } from 'twenty-ui/primitives/typography';
+import { AppPath, Command, enqueueSnackbar, navigate } from 'twenty-sdk/front-component';
 
 import {
   IMPORT_FRONT_COMPONENT_UNIVERSAL_IDENTIFIER,
-  SHUTTIO_IMPORT_URL,
+  IMPORT_PAGE_LAYOUT_UNIVERSAL_IDENTIFIER,
+  IMPORT_PAGE_NAME,
 } from 'src/constants/universal-identifiers';
 
-const ImportWithShuttio = () => {
-  const theme = useTheme();
-
+// The page's route takes the page layout's id in this workspace, not its
+// universal identifier, so look it up first.
+const findImportPageId = async (): Promise<string | null> => {
+  const result = await new MetadataApiClient().query({
+    getPageLayouts: {
+      __args: { pageLayoutType: 'STANDALONE_PAGE' },
+      id: true,
+      universalIdentifier: true,
+    },
+  });
   return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'flex-start',
-        gap: theme.spacing['3'],
-        padding: theme.spacing['4'],
-      }}
-    >
-      <Heading level={2} size="md">
-        Import data with Shuttio
-      </Heading>
-      <Text>
-        Move companies, people, deals, custom objects, notes and tasks from
-        HubSpot, Pipedrive, Affinity, Attio or a CSV file into this workspace.
-      </Text>
-      <Text>
-        Shuttio opens in a new tab with Twenty chosen as the destination. You
-        connect the source and this workspace there, review the field mapping
-        and check a free sample before the full migration.
-      </Text>
-      <MainButton
-        href={SHUTTIO_IMPORT_URL}
-        target="_blank"
-        rel="noopener noreferrer"
-        endIcon={<IconExternalLink size={16} />}
-      >
-        Open Shuttio
-      </MainButton>
-    </div>
+    result.getPageLayouts?.find(
+      (layout: { universalIdentifier: string }) =>
+        layout.universalIdentifier === IMPORT_PAGE_LAYOUT_UNIVERSAL_IDENTIFIER,
+    )?.id ?? null
   );
+};
+
+const OpenImportPage = () => {
+  const execute = async () => {
+    try {
+      const pageLayoutId = await findImportPageId();
+      if (pageLayoutId) {
+        await navigate(AppPath.PageLayoutPage, { pageLayoutId });
+        return;
+      }
+    } catch {
+      // Fall through to the hint below.
+    }
+    await enqueueSnackbar({
+      message: `Open “${IMPORT_PAGE_NAME}” in the left menu`,
+      variant: 'info',
+    });
+  };
+
+  return <Command execute={execute} />;
 };
 
 export default defineFrontComponent({
   universalIdentifier: IMPORT_FRONT_COMPONENT_UNIVERSAL_IDENTIFIER,
   name: 'import-with-shuttio',
-  description: 'Opens Shuttio with Twenty chosen as the destination',
-  component: ImportWithShuttio,
+  description: 'Opens the Import with Shuttio page',
+  isHeadless: true,
+  component: OpenImportPage,
 });
