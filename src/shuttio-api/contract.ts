@@ -143,6 +143,10 @@ export type MigrationDetail = {
   price?: { amountUsd: number; recordCount: number | null } | null;
   objects: ObjectProgress[];
   errors: { object: string; message: string; count: number }[];
+  // Records that imported without some links, one plain sentence per object and linked object
+  // ("34 companies imported without some links to people: those people are not in the sample. …").
+  skippedLinks?: string[];
+  // Labelled by the record's name ("Acme"); "Company 2" only when the record has none.
   links: RecordLink[];
   resultsUrl?: string;
   offer?: PriceOffer;

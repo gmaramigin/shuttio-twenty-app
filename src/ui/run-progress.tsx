@@ -59,6 +59,17 @@ export const RunProgress = ({ detail }: { detail: MigrationDetail }) => {
         </div>
       )}
 
+      {detail.skippedLinks && detail.skippedLinks.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: theme.spacing['1'] }}>
+          <Text style={{ fontWeight: theme.font.weight.medium }}>Imported without some links</Text>
+          {detail.skippedLinks.slice(0, 8).map((line) => (
+            <Text key={line} style={{ color: theme.font.color.secondary }}>
+              {line}
+            </Text>
+          ))}
+        </div>
+      )}
+
       {detail.errors.length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: theme.spacing['1'] }}>
           <Text style={{ fontWeight: theme.font.weight.medium }}>Records that did not import</Text>
