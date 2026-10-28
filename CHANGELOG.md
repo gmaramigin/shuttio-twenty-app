@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.4.0
+
+- Object ticks on Review fields save one after another from the latest state and stay clickable while an earlier tick saves, so quick clicks are no longer lost.
+- The sample result lists records that imported without some links as plain grouped sentences, and its record buttons carry the record names. Lists show their names.
+
 ## 2.3.0
 
 - A linked workspace starts a new migration (after a rollback, or another source) without connecting Twenty again: Shuttio makes the migration itself. "Open Shuttio" now shows only when Shuttio has lost access to Twenty, and says so.
