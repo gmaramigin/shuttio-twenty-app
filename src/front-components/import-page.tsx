@@ -106,6 +106,8 @@ const ImportPage = () => {
   const theme = useTheme();
 
   const [loading, setLoading] = useState(true);
+  // False until the first status and connection check answer, so a reload does not flash "Connect …".
+  const [ready, setReady] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const [failure, setFailure] = useState<Failure | null>(null);
   const [linkUrl, setLinkUrl] = useState<string | null>(null);
@@ -175,6 +177,7 @@ const ImportPage = () => {
         setFailure(failureOf('Shuttio did not answer', statusResult));
       }
       setLoading(false);
+      setReady(true);
       return false;
     }
 
@@ -182,6 +185,8 @@ const ImportPage = () => {
     if (!sourceSettled.current) {
       sourceSettled.current = true;
       const settled = initialSource(statusResult.data, readRememberedSource());
+      // Kept for the next visit, so a rollback does not send the page back to HubSpot.
+      rememberSource(settled);
       if (settled !== source) {
         setSource(settled);
         return statusResult.data.linked;
@@ -213,7 +218,10 @@ const ImportPage = () => {
       setDetail(null);
       setMapping(null);
     }
-    if (mounted.current) setLoading(false);
+    if (mounted.current) {
+      setLoading(false);
+      setReady(true);
+    }
     return statusResult.data.linked;
   }, [loadDetail, loadMapping, source]);
 
@@ -275,6 +283,13 @@ const ImportPage = () => {
     }
     await loadDetail(created.id);
     await loadMapping(created.id);
+  };
+
+  // Closes the reopened fields without saving: the saved mapping comes back.
+  const cancelEdit = async () => {
+    if (!detail) return;
+    setOpenStep(null);
+    if (mappingDirty) await loadMapping(detail.id);
   };
 
   const saveMapping = async () => {
@@ -439,6 +454,14 @@ const ImportPage = () => {
         );
 
       case 'source':
+        if (connection === null && loading) {
+          return (
+            <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing['2'] }}>
+              <Loader />
+              <Text>Checking the {label} connection…</Text>
+            </div>
+          );
+        }
         if (!connection?.connected) {
           return (
             <>
@@ -523,6 +546,11 @@ const ImportPage = () => {
               <MainButton onClick={() => void saveMapping()} loading={busy === 'save'} disabled={busy !== null}>
                 Save fields
               </MainButton>
+              {openStep === 'fields' && (
+                <LightButton onClick={() => void cancelEdit()} disabled={busy !== null}>
+                  Cancel
+                </LightButton>
+              )}
               {mappingDirty && <Text style={{ color: theme.font.color.tertiary }}>Unsaved changes</Text>}
             </div>
           </>
@@ -713,7 +741,7 @@ const ImportPage = () => {
           />
         )}
 
-        {status === null && linkUrl === null ? (
+        {!ready || (status === null && linkUrl === null) ? (
           loading && (
           <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing['2'] }}>
             <Loader />
@@ -725,8 +753,14 @@ const ImportPage = () => {
             const isDone = done[step.key];
             const isCurrent = step.key === currentStep;
             const isLocked = index > currentIndex;
+            // Fields reopen after "Done" while the migration is in setup and nothing runs.
             const canReopen =
-              isDone && step.key === 'fields' && canEditFields(detail);
+              isDone &&
+              step.key === 'fields' &&
+              canEditFields(detail) &&
+              detail !== null &&
+              !isRunning(detail.status) &&
+              mapping !== null;
             const expanded = isCurrent || openStep === step.key || (step.key === 'sample' && isDone && detail?.isSample === true && !detail.paid) || (step.key === 'full' && detail !== null && !detail.isSample);
             return (
               <section

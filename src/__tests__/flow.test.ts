@@ -40,6 +40,15 @@ describe('initialSource', () => {
     expect(initialSource(null, 'salesforce')).toBe('hubspot');
     expect(initialSource(null, null)).toBe('hubspot');
   });
+
+  it('keeps the source of a rolled-back migration when nothing was chosen', () => {
+    const s = status([
+      { id: 'a', source: 'hubspot', status: 'rolled_back', createdAt: '2026-10-01T00:00:00Z' },
+      { id: 'b', source: 'attio', status: 'rolled_back', createdAt: '2026-10-02T00:00:00Z' },
+    ]);
+    expect(initialSource(s, null)).toBe('attio');
+    expect(initialSource(s, 'pipedrive')).toBe('pipedrive');
+  });
 });
 
 describe('doneSteps', () => {
