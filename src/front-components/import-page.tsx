@@ -120,6 +120,11 @@ const ImportPage = () => {
   const STEPS = stepsFor(label);
   const [detail, setDetail] = useState<MigrationDetail | null>(null);
   const [mapping, setMapping] = useState<MappingObject[] | null>(null);
+  // Ticks saved one after another from the latest state, so quick clicks do not overwrite each other.
+  const ticksRef = useRef<MappingObject[] | null>(null);
+  const tickQueue = useRef<Promise<void>>(Promise.resolve());
+  const pendingTicks = useRef(0);
+
   const [mappingDirty, setMappingDirty] = useState(false);
   const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
   const [openStep, setOpenStep] = useState<StepKey | null>(null);
@@ -363,28 +368,34 @@ const ImportPage = () => {
     setMappingDirty(true);
   };
 
-  const toggleObject = async (sourceObject: string, included: boolean) => {
-    const next = (mapping ?? []).map((object) =>
+  const toggleObject = (sourceObject: string, included: boolean) => {
+    const next = (ticksRef.current ?? mapping ?? []).map((object) =>
       object.sourceObject === sourceObject ? { ...object, included } : object,
     );
+    ticksRef.current = next;
     setMapping(next);
     setMappingDirty(true);
     // Shuttio sends no fields for an object that is not ticked: save the tick, then read them.
     const target = next.find((object) => object.sourceObject === sourceObject);
     if (!detail || !included || !target || target.sourceFields.length > 0) return;
-    const body: SaveMappingRequest = {
-      objects: next.map((object) => ({
-        sourceObject: object.sourceObject,
-        included: object.included,
-        mapping: object.mapping,
-      })),
-    };
-    const saved = await act('save', 'Could not read the fields of this object', () =>
-      shuttio.put<unknown>(`migrations/${detail.id}/mapping`, body),
-    );
-    if (saved === null) return;
-    setMappingDirty(false);
-    await loadMapping(detail.id);
+    const migrationId = detail.id;
+    pendingTicks.current += 1;
+    tickQueue.current = tickQueue.current.then(async () => {
+      const body: SaveMappingRequest = {
+        objects: (ticksRef.current ?? next).map((object) => ({
+          sourceObject: object.sourceObject,
+          included: object.included,
+          mapping: object.mapping,
+        })),
+      };
+      const saved = await act('save', 'Could not read the fields of this object', () =>
+        shuttio.put<unknown>(`migrations/${migrationId}/mapping`, body),
+      );
+      pendingTicks.current -= 1;
+      if (saved === null || pendingTicks.current > 0) return;
+      ticksRef.current = null;
+      await loadMapping(migrationId);
+    });
   };
 
   // Which steps are finished, from what Shuttio and Twenty report.
@@ -504,7 +515,7 @@ const ImportPage = () => {
             <MappingTable
               objects={mapping}
               disabled={busy !== null || (detail !== null && isRunning(detail.status))}
-              onToggleObject={(sourceObject, included) => void toggleObject(sourceObject, included)}
+              onToggleObject={(sourceObject, included) => toggleObject(sourceObject, included)}
               onChangeTarget={changeTarget}
             />
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: theme.spacing['2'] }}>
