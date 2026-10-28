@@ -95,6 +95,8 @@ const TargetPicker = ({ object, field: source, sourceLabel, value, disabled, onC
 type MappingTableProps = {
   objects: MappingObject[];
   disabled: boolean;
+  // Object ticks stay usable while earlier ticks save; they queue.
+  ticksDisabled?: boolean;
   onToggleObject: (sourceObject: string, included: boolean) => void;
   onChangeTarget: (sourceObject: string, sourceField: string, target: FieldTarget) => void;
 };
@@ -102,6 +104,7 @@ type MappingTableProps = {
 export const MappingTable = ({
   objects,
   disabled,
+  ticksDisabled,
   onToggleObject,
   onChangeTarget,
 }: MappingTableProps) => {
@@ -135,7 +138,7 @@ export const MappingTable = ({
                 >
                   <Checkbox
                     checked={object.included}
-                    disabled={disabled}
+                    disabled={ticksDisabled ?? disabled}
                     onCheckedChange={(checked) => onToggleObject(object.sourceObject, checked)}
                   />
                   <Text>Import</Text>

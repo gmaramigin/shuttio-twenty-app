@@ -515,6 +515,7 @@ const ImportPage = () => {
             <MappingTable
               objects={mapping}
               disabled={busy !== null || (detail !== null && isRunning(detail.status))}
+              ticksDisabled={(busy !== null && busy !== 'save') || (detail !== null && isRunning(detail.status))}
               onToggleObject={(sourceObject, included) => toggleObject(sourceObject, included)}
               onChangeTarget={changeTarget}
             />
