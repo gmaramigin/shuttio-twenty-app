@@ -255,7 +255,7 @@ const ImportPage = () => {
     if (!mounted.current) return;
     setBusy(null);
     if (!result.ok) {
-      // Each migration connects Twenty once: Shuttio answers with a link that makes one of this source.
+      // A linked workspace gets a new migration without another consent; link_required means Shuttio lost access to Twenty.
       if (result.code === 'link_required' && result.linkUrl) setRelinkUrl(result.linkUrl);
       else setFailure(failureOf('Could not start a migration', result));
       return;
@@ -460,8 +460,8 @@ const ImportPage = () => {
             {relinkUrl ? (
               <>
                 <Text>
-                  Each migration connects Twenty once. Open Shuttio to set up the {label} migration,
-                  then come back and press Read {label} again.
+                  Shuttio no longer has access to this Twenty workspace. Open Shuttio to connect Twenty
+                  again, then come back and press Read {label}.
                 </Text>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: theme.spacing['2'] }}>
                   <MainButton href={relinkUrl} target="_blank" rel="noopener noreferrer" endIcon={<IconExternalLink size={16} />}>

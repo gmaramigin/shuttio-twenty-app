@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.3.0
+
+- A linked workspace starts a new migration (after a rollback, or another source) without connecting Twenty again: Shuttio makes the migration itself. "Open Shuttio" now shows only when Shuttio has lost access to Twenty, and says so.
+
 ## 2.2.0
 
 - The source (HubSpot, Attio, Pipedrive) comes from the newest migration, else the last choice in this browser; a reload no longer resets it to HubSpot.
