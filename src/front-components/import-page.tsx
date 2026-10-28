@@ -561,7 +561,11 @@ const ImportPage = () => {
         if (detail.isSample && isRunning(detail.status)) {
           return (
             <>
-              <Text>Shuttio is writing the sample into this workspace.</Text>
+              <Text>
+                {detail.status === 'rolling_back'
+                  ? 'Shuttio is deleting the sample from this workspace.'
+                  : 'Shuttio is writing the sample into this workspace.'}
+              </Text>
               <RunProgress detail={detail} />
             </>
           );
