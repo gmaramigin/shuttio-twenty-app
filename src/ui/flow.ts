@@ -8,16 +8,19 @@ export type StepKey = 'link' | 'source' | 'fields' | 'sample' | 'pay' | 'full';
 export const SOURCE_STORAGE_KEY = 'shuttio.import.source';
 
 // The source of the newest migration that is not rolled back, else the one this
-// browser chose last, else HubSpot.
+// browser chose last, else the source of the newest rolled-back migration, else HubSpot.
 export const initialSource = (
   status: StatusResponse | null,
   remembered: string | null,
 ): SourceProvider => {
-  const newest = [...(status?.migrations ?? [])]
-    .filter((migration) => migration.status !== 'rolled_back' && isSourceProvider(migration.source))
-    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
+  const migrations = [...(status?.migrations ?? [])]
+    .filter((migration) => isSourceProvider(migration.source))
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  const newest = migrations.find((migration) => migration.status !== 'rolled_back');
   if (newest && isSourceProvider(newest.source)) return newest.source;
-  return isSourceProvider(remembered) ? remembered : 'hubspot';
+  if (isSourceProvider(remembered)) return remembered;
+  const rolledBack = migrations[0];
+  return rolledBack && isSourceProvider(rolledBack.source) ? rolledBack.source : 'hubspot';
 };
 
 // localStorage may be missing or refuse in the front-component sandbox: never throw.
@@ -62,6 +65,9 @@ export const doneSteps = (o: {
 
 // The fields can still change only while the migration is in setup (Shuttio answers
 // 409 already_started after that).
+// TODO: if Shuttio lets a rolled-back sample be edited again, it should answer 'setup' for it.
+// Adding 'rolled_back' here alone does nothing: latestMigration() on the import page skips
+// rolled-back migrations, so the page never loads their fields.
 export const canEditFields = (detail: MigrationDetail | null) =>
   detail !== null && detail.status === 'setup';
 

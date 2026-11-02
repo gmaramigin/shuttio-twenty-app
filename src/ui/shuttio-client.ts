@@ -44,20 +44,55 @@ const run = async <T>(send: (client: RestApiClient) => Promise<unknown>): Promis
 
 const proxyPath = (path: string) => `/s${PROXY_ROUTE_PREFIX}/${path}`;
 
-// A GET that never reached Twenty (status 0: the request threw before any answer, as
-// on a cold logic function) is sent once more. Writes are never repeated.
-export const withOneRetry = async <T>(call: () => Promise<CallResult<T>>): Promise<CallResult<T>> => {
-  const first = await call();
-  return !first.ok && first.status === 0 ? call() : first;
+// A call that hangs past Twenty's 30-second function limit ends as "did not reach Twenty", so a
+// click always gets an answer.
+const ATTEMPT_MS = 40_000;
+const timeoutSignal = (): AbortSignal | undefined =>
+  typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function'
+    ? AbortSignal.timeout(ATTEMPT_MS)
+    : undefined;
+
+// Failures of the way to Shuttio, not answers from it: the request threw before any answer (as on
+// a cold logic function), or the proxy or a gateway gave up.
+const TRANSIENT = new Set([0, 502, 503, 504]);
+export const isTransient = (result: CallResult<unknown>) => !result.ok && TRANSIENT.has(result.status);
+
+const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+// Sends the call again after each delay while it fails on the way. Only for calls Shuttio may
+// receive twice: reads, the mapping save (the same body), and starts it refuses to repeat.
+export const withRetry = async <T>(
+  call: () => Promise<CallResult<T>>,
+  delays: number[],
+  wait: (ms: number) => Promise<void> = sleep,
+): Promise<CallResult<T>> => {
+  let result = await call();
+  for (const delay of delays) {
+    if (!isTransient(result)) break;
+    await wait(delay);
+    result = await call();
+  }
+  return result;
 };
 
+const READ_RETRIES = [500, 1_500];
+const WRITE_RETRIES = [1_000];
+
 export const shuttio = {
-  get: <T>(path: string) => withOneRetry(() => run<T>((client) => client.get(proxyPath(path)))),
+  get: <T>(path: string) =>
+    withRetry(() => run<T>((client) => client.get(proxyPath(path), { signal: timeoutSignal() })), READ_RETRIES),
+  // Not repeated: a repeat could make a second migration or checkout.
   post: <T>(path: string, body: unknown = {}) =>
-    run<T>((client) => client.post(proxyPath(path), body)),
+    run<T>((client) => client.post(proxyPath(path), body, { signal: timeoutSignal() })),
+  // Repeated on the way failures: Shuttio refuses a second sample, run or rollback of one migration.
+  postRepeatable: <T>(path: string, body: unknown = {}) =>
+    withRetry(() => run<T>((client) => client.post(proxyPath(path), body, { signal: timeoutSignal() })), WRITE_RETRIES),
   put: <T>(path: string, body: unknown) =>
-    run<T>((client) => client.put(proxyPath(path), body)),
+    withRetry(() => run<T>((client) => client.put(proxyPath(path), body, { signal: timeoutSignal() })), WRITE_RETRIES),
 };
 
 export const getSourceStatus = <T>(provider: SourceProvider) =>
-  withOneRetry(() => run<T>((client) => client.get(`/s${SOURCE_STATUS_ROUTE}?provider=${provider}`)));
+  withRetry(
+    () => run<T>((client) => client.get(`/s${SOURCE_STATUS_ROUTE}?provider=${provider}`, { signal: timeoutSignal() })),
+    READ_RETRIES,
+  );
