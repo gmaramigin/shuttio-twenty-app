@@ -29,7 +29,6 @@ import type {
   MigrationDetail,
   PriceOffer,
   SourceProvider,
-  SaveMappingRequest,
   StatusResponse,
 } from 'src/shuttio-api/contract';
 import { MappingTable } from 'src/ui/mapping-table';
@@ -42,6 +41,7 @@ import {
   rememberSource,
 } from 'src/ui/flow';
 import type { StepKey } from 'src/ui/flow';
+import { mergeServerMapping, needsFields, saveBodyOf } from 'src/ui/mapping-sync';
 import { getSourceStatus, shuttio } from 'src/ui/shuttio-client';
 import type { CallResult } from 'src/ui/shuttio-client';
 
@@ -122,10 +122,13 @@ const ImportPage = () => {
   const STEPS = stepsFor(label);
   const [detail, setDetail] = useState<MigrationDetail | null>(null);
   const [mapping, setMapping] = useState<MappingObject[] | null>(null);
-  // Ticks saved one after another from the latest state, so quick clicks do not overwrite each other.
-  const ticksRef = useRef<MappingObject[] | null>(null);
-  const tickQueue = useRef<Promise<void>>(Promise.resolve());
-  const pendingTicks = useRef(0);
+  // The latest ticks and fields, for saves that run after the click that queued them.
+  const mappingRef = useRef<MappingObject[] | null>(null);
+  // Every change on the page counts up; a save records the count it sent. Equal counts: Shuttio has it all.
+  const editCount = useRef(0);
+  const savedCount = useRef(0);
+  // Saves run one after another, each from the latest state, so quick clicks do not overwrite each other.
+  const saveQueue = useRef<Promise<unknown>>(Promise.resolve());
 
   const [mappingDirty, setMappingDirty] = useState(false);
   const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
@@ -150,6 +153,11 @@ const ImportPage = () => {
     return result.data;
   }, []);
 
+  const showMapping = useCallback((objects: MappingObject[] | null) => {
+    mappingRef.current = objects;
+    setMapping(objects);
+  }, []);
+
   const loadMapping = useCallback(async (migrationId: string) => {
     const result = await shuttio.get<MappingResponse>(`migrations/${migrationId}/mapping`);
     if (!mounted.current) return;
@@ -157,9 +165,10 @@ const ImportPage = () => {
       setFailure(failureOf(`Could not read the fields from ${SOURCE_LABELS[source]}`, result));
       return;
     }
-    setMapping(result.data.objects);
+    showMapping(result.data.objects);
+    savedCount.current = editCount.current;
     setMappingDirty(false);
-  }, [source]);
+  }, [source, showMapping]);
 
   // Answers whether the workspace is linked to Shuttio.
   const load = useCallback(async (): Promise<boolean> => {
@@ -212,18 +221,18 @@ const ImportPage = () => {
       if (loaded && loaded.sourceConnected && canEditFields(loaded)) {
         await loadMapping(current.id);
       } else {
-        setMapping(null);
+        showMapping(null);
       }
     } else {
       setDetail(null);
-      setMapping(null);
+      showMapping(null);
     }
     if (mounted.current) {
       setLoading(false);
       setReady(true);
     }
     return statusResult.data.linked;
-  }, [loadDetail, loadMapping, source]);
+  }, [loadDetail, loadMapping, showMapping, source]);
 
   const checkLink = async () => {
     const linked = await load();
@@ -261,6 +270,15 @@ const ImportPage = () => {
     return result.data;
   };
 
+  // A click whose handler throws (a modal or snackbar that failed) still ends with an error on screen.
+  const click = (title: string, handler: () => Promise<void>) => () => {
+    handler().catch((error: unknown) => {
+      if (!mounted.current) return;
+      setBusy(null);
+      setFailure({ title, message: error instanceof Error ? error.message : 'Something went wrong. Try again.' });
+    });
+  };
+
   const startMigration = async () => {
     setBusy('start');
     setFailure(null);
@@ -292,31 +310,66 @@ const ImportPage = () => {
     if (mappingDirty) await loadMapping(detail.id);
   };
 
+  // Saves the latest ticks and fields after any save already on its way. Without `always`, only
+  // when the page holds changes Shuttio does not have. True when Shuttio has them all.
+  const persistMapping = (migrationId: string, failTitle: string, always: boolean): Promise<boolean> => {
+    const job = saveQueue.current.then(async () => {
+      const objects = mappingRef.current;
+      if (!objects) return true;
+      if (!always && savedCount.current === editCount.current) return true;
+      const sent = editCount.current;
+      const saved = await act('save', failTitle, () =>
+        shuttio.put<unknown>(`migrations/${migrationId}/mapping`, saveBodyOf(objects)),
+      );
+      if (saved === null || !mounted.current) return false;
+      savedCount.current = Math.max(savedCount.current, sent);
+      // Shuttio sends no fields for an object that was not ticked: read them now it is.
+      if (needsFields(objects)) {
+        const result = await shuttio.get<MappingResponse>(`migrations/${migrationId}/mapping`);
+        if (!mounted.current) return true;
+        if (result.ok) showMapping(mergeServerMapping(result.data.objects, mappingRef.current));
+        else setFailure(failureOf(`Could not read the fields from ${label}`, result));
+      }
+      setMappingDirty(savedCount.current !== editCount.current);
+      return true;
+    });
+    saveQueue.current = job.catch(() => false);
+    return job;
+  };
+
   const saveMapping = async () => {
-    if (!detail || !mapping) return;
-    const body: SaveMappingRequest = {
-      objects: mapping.map((object) => ({
-        sourceObject: object.sourceObject,
-        included: object.included,
-        mapping: object.mapping,
-      })),
-    };
-    const saved = await act('save', 'Could not save the fields', () =>
-      shuttio.put<unknown>(`migrations/${detail.id}/mapping`, body),
-    );
-    if (saved === null) return;
-    setMappingDirty(false);
+    if (!detail || !mappingRef.current) return;
+    const saved = await persistMapping(detail.id, 'Could not save the fields', true);
+    if (!saved || !mounted.current) return;
     setOpenStep(null);
     await enqueueSnackbar({ message: 'Fields saved', variant: 'success' });
     await loadDetail(detail.id);
   };
 
+  // A start whose answer was lost may still have started: the migration's status tells.
+  const startedAnyway = async (migrationId: string, statuses: MigrationDetail['status'][]) => {
+    const now = await loadDetail(migrationId);
+    if (now && statuses.includes(now.status)) {
+      setFailure(null);
+      return true;
+    }
+    return false;
+  };
+
   const startSample = async () => {
     if (!detail) return;
+    // The sample runs on the mapping Shuttio has: ticks still saving or unsaved go first.
+    setBusy('sample');
+    const saved = await persistMapping(detail.id, 'Could not save the fields before the sample', false);
+    if (!saved || !mounted.current) return;
     const started = await act('sample', 'Could not start the sample', () =>
-      shuttio.post<unknown>(`migrations/${detail.id}/sample`),
+      shuttio.postRepeatable<unknown>(`migrations/${detail.id}/sample`),
     );
-    if (started !== null) await loadDetail(detail.id);
+    if (started === null) {
+      await startedAnyway(detail.id, ['sample_running', 'sample_done']);
+      return;
+    }
+    await loadDetail(detail.id);
   };
 
   const openCheckout = async () => {
@@ -360,9 +413,16 @@ const ImportPage = () => {
     });
     if (answer !== 'confirm') return;
     const started = await act('rollback', 'Could not start the rollback', () =>
-      shuttio.post<unknown>(`migrations/${detail.id}/rollback`),
+      shuttio.postRepeatable<unknown>(`migrations/${detail.id}/rollback`),
     );
-    if (started !== null) await loadDetail(detail.id);
+    if (started === null) {
+      if (await startedAnyway(detail.id, ['rolling_back', 'rolled_back'])) {
+        await enqueueSnackbar({ message: 'Rollback started', variant: 'success' });
+      }
+      return;
+    }
+    await enqueueSnackbar({ message: 'Rollback started', variant: 'success' });
+    await loadDetail(detail.id);
   };
 
   // Settings → Apps → Shuttio, where "Add connection" lives; the apps list when the id is unknown.
@@ -372,45 +432,32 @@ const ImportPage = () => {
     });
   };
 
+  const markEdited = () => {
+    editCount.current += 1;
+    setMappingDirty(true);
+  };
+
   const changeTarget = (sourceObject: string, sourceField: string, target: FieldTarget) => {
-    setMapping((objects) =>
-      (objects ?? []).map((object) =>
+    showMapping(
+      (mappingRef.current ?? []).map((object) =>
         object.sourceObject === sourceObject
           ? { ...object, mapping: { ...object.mapping, [sourceField]: target } }
           : object,
       ),
     );
-    setMappingDirty(true);
+    markEdited();
   };
 
   const toggleObject = (sourceObject: string, included: boolean) => {
-    const next = (ticksRef.current ?? mapping ?? []).map((object) =>
+    const next = (mappingRef.current ?? []).map((object) =>
       object.sourceObject === sourceObject ? { ...object, included } : object,
     );
-    ticksRef.current = next;
-    setMapping(next);
-    setMappingDirty(true);
+    showMapping(next);
+    markEdited();
     // Shuttio sends no fields for an object that is not ticked: save the tick, then read them.
     const target = next.find((object) => object.sourceObject === sourceObject);
     if (!detail || !included || !target || target.sourceFields.length > 0) return;
-    const migrationId = detail.id;
-    pendingTicks.current += 1;
-    tickQueue.current = tickQueue.current.then(async () => {
-      const body: SaveMappingRequest = {
-        objects: (ticksRef.current ?? next).map((object) => ({
-          sourceObject: object.sourceObject,
-          included: object.included,
-          mapping: object.mapping,
-        })),
-      };
-      const saved = await act('save', 'Could not read the fields of this object', () =>
-        shuttio.put<unknown>(`migrations/${migrationId}/mapping`, body),
-      );
-      pendingTicks.current -= 1;
-      if (saved === null || pendingTicks.current > 0) return;
-      ticksRef.current = null;
-      await loadMapping(migrationId);
-    });
+    void persistMapping(detail.id, 'Could not read the fields of this object', false);
   };
 
   // Which steps are finished, from what Shuttio and Twenty report.
@@ -501,14 +548,14 @@ const ImportPage = () => {
                   <MainButton href={relinkUrl} target="_blank" rel="noopener noreferrer" endIcon={<IconExternalLink size={16} />}>
                     Open Shuttio
                   </MainButton>
-                  <LightButton onClick={() => void startMigration()} loading={busy === 'start'} disabled={busy !== null}>
+                  <LightButton onClick={click(`Shuttio could not read ${label}`, startMigration)} loading={busy === 'start'} disabled={busy !== null}>
                     Read {label}
                   </LightButton>
                 </div>
               </>
             ) : (
               <div>
-                <MainButton onClick={() => void startMigration()} loading={busy === 'start'} disabled={busy !== null}>
+                <MainButton onClick={click(`Shuttio could not read ${label}`, startMigration)} loading={busy === 'start'} disabled={busy !== null}>
                   Read {label}
                 </MainButton>
               </div>
@@ -543,7 +590,7 @@ const ImportPage = () => {
               onChangeTarget={changeTarget}
             />
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: theme.spacing['2'] }}>
-              <MainButton onClick={() => void saveMapping()} loading={busy === 'save'} disabled={busy !== null}>
+              <MainButton onClick={click('Could not save the fields', saveMapping)} loading={busy === 'save'} disabled={busy !== null}>
                 Save fields
               </MainButton>
               {openStep === 'fields' && (
@@ -576,7 +623,7 @@ const ImportPage = () => {
               <Text>The sample is in Twenty. Open a few records and check them, then pay for the full migration.</Text>
               <RunProgress detail={detail} />
               <div>
-                <LightButton onClick={() => void rollback()} loading={busy === 'rollback'} disabled={busy !== null}>
+                <LightButton onClick={click('Could not start the rollback', rollback)} loading={busy === 'rollback'} disabled={busy !== null}>
                   Roll back sample
                 </LightButton>
               </div>
@@ -590,7 +637,7 @@ const ImportPage = () => {
               links, notes and tasks. Free. You check the result in Twenty before anything else moves.
             </Text>
             <div>
-              <MainButton onClick={() => void startSample()} loading={busy === 'sample'} disabled={busy !== null}>
+              <MainButton onClick={click('Could not start the sample', startSample)} loading={busy === 'sample'} disabled={busy !== null}>
                 Run free sample
               </MainButton>
             </div>
@@ -619,7 +666,7 @@ const ImportPage = () => {
                 </MainButton>
               ) : (
                 <MainButton
-                  onClick={() => void openCheckout()}
+                  onClick={click('Could not open Stripe Checkout', openCheckout)}
                   loading={busy === 'checkout'}
                   disabled={busy !== null || !price}
                 >
@@ -644,7 +691,7 @@ const ImportPage = () => {
               <>
                 <Text>Payment received. Start the full migration when you are ready.</Text>
                 <div>
-                  <MainButton onClick={() => void runFull()} loading={busy === 'run'} disabled={busy !== null}>
+                  <MainButton onClick={click('Could not start the full migration', runFull)} loading={busy === 'run'} disabled={busy !== null}>
                     Run full migration
                   </MainButton>
                 </div>
@@ -666,7 +713,7 @@ const ImportPage = () => {
             )}
             {!detail.isSample && (detail.status === 'done' || detail.status === 'failed') && (
               <div>
-                <LightButton onClick={() => void rollback()} loading={busy === 'rollback'} disabled={busy !== null}>
+                <LightButton onClick={click('Could not start the rollback', rollback)} loading={busy === 'rollback'} disabled={busy !== null}>
                   Roll back
                 </LightButton>
               </div>
@@ -713,7 +760,7 @@ const ImportPage = () => {
                     sourceSettled.current = true;
                     rememberSource(provider);
                     setDetail(null);
-                    setMapping(null);
+                    showMapping(null);
                     setConnection(null);
                     setOpenStep(null);
                     setSource(provider);

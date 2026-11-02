@@ -65,6 +65,9 @@ export const doneSteps = (o: {
 
 // The fields can still change only while the migration is in setup (Shuttio answers
 // 409 already_started after that).
+// TODO: if Shuttio lets a rolled-back sample be edited again, it should answer 'setup' for it.
+// Adding 'rolled_back' here alone does nothing: latestMigration() on the import page skips
+// rolled-back migrations, so the page never loads their fields.
 export const canEditFields = (detail: MigrationDetail | null) =>
   detail !== null && detail.status === 'setup';
 

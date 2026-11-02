@@ -97,15 +97,30 @@ describe('recordInTwenty', () => {
   });
 });
 
-describe('withOneRetry', () => {
-  it('sends a GET that never reached Twenty once more, and nothing else', async () => {
-    const { withOneRetry } = await import('src/ui/shuttio-client');
+describe('withRetry', () => {
+  const lost = { ok: false as const, status: 0, code: 'http_0', message: 'x' };
+  const noWait = async () => {};
+
+  it('sends a call that failed on the way again, after each delay', async () => {
+    const { withRetry } = await import('src/ui/shuttio-client');
     let calls = 0;
-    const lost = await withOneRetry(async () => (++calls === 1 ? { ok: false as const, status: 0, code: 'http_0', message: 'x' } : { ok: true as const, data: 1 }));
-    expect(lost).toEqual({ ok: true, data: 1 });
+    const result = await withRetry(async () => (++calls < 3 ? lost : { ok: true as const, data: 1 }), [1, 1], noWait);
+    expect(result).toEqual({ ok: true, data: 1 });
+    expect(calls).toBe(3);
+  });
+
+  it('retries a proxy or gateway timeout, and stops after the last delay', async () => {
+    const { withRetry } = await import('src/ui/shuttio-client');
+    let calls = 0;
+    const result = await withRetry(async () => { calls++; return { ...lost, status: 502 }; }, [1], noWait);
+    expect(result.ok).toBe(false);
     expect(calls).toBe(2);
-    calls = 0;
-    await withOneRetry(async () => { calls++; return { ok: false as const, status: 409, code: 'already_started', message: 'x' }; });
+  });
+
+  it('never repeats an answer from Shuttio', async () => {
+    const { withRetry } = await import('src/ui/shuttio-client');
+    let calls = 0;
+    await withRetry(async () => { calls++; return { ok: false as const, status: 409, code: 'already_started', message: 'x' }; }, [1, 1], noWait);
     expect(calls).toBe(1);
   });
 });
