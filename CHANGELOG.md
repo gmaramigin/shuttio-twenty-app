@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.5.0
+
+- Review fields shows each field's Twenty type ("Twenty type: Links") from Twenty's own field types, hides empty fields left on Skip behind "Show N empty fields", and folds each object.
+- Object ticks and field choices save in order and survive a reload; after a sample rollback the step opens again with the saved mapping, and Edit works after Done.
+- A request that times out or meets a 502/503/504 is sent again; sample and rollback starts are safe to repeat. A failed button says why, and a rollback says "Rollback started".
+- After a reload the page waits for Shuttio and the connection check instead of flashing "Connect Attio".
+
 ## 2.4.0
 
 - Object ticks on Review fields save one after another from the latest state and stay clickable while an earlier tick saves, so quick clicks are no longer lost.
