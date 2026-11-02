@@ -271,6 +271,9 @@ const ImportPage = () => {
   };
 
   // A click whose handler throws (a modal or snackbar that failed) still ends with an error on screen.
+  // Kept out of the JSX: the manifest build parses this file as plain TypeScript, where a template
+  // literal inside JSX derails the parse and drops the component from the manifest.
+  const startFailTitle = `Shuttio could not read ${label}`;
   const click = (title: string, handler: () => Promise<void>) => () => {
     handler().catch((error: unknown) => {
       if (!mounted.current) return;
@@ -548,14 +551,14 @@ const ImportPage = () => {
                   <MainButton href={relinkUrl} target="_blank" rel="noopener noreferrer" endIcon={<IconExternalLink size={16} />}>
                     Open Shuttio
                   </MainButton>
-                  <LightButton onClick={click(`Shuttio could not read ${label}`, startMigration)} loading={busy === 'start'} disabled={busy !== null}>
+                  <LightButton onClick={click(startFailTitle, startMigration)} loading={busy === 'start'} disabled={busy !== null}>
                     Read {label}
                   </LightButton>
                 </div>
               </>
             ) : (
               <div>
-                <MainButton onClick={click(`Shuttio could not read ${label}`, startMigration)} loading={busy === 'start'} disabled={busy !== null}>
+                <MainButton onClick={click(startFailTitle, startMigration)} loading={busy === 'start'} disabled={busy !== null}>
                   Read {label}
                 </MainButton>
               </div>
