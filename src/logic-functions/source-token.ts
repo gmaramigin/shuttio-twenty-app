@@ -17,7 +17,7 @@ const sameSecret = (given: string, expected: string) => {
 };
 
 // Shuttio calls this with its Twenty OAuth token to read the workspace's HubSpot,
-// Attio or Pipedrive token on demand; Shuttio stores no source token of its own.
+// Attio token on demand; Shuttio stores no source token of its own.
 //
 // Twenty authenticates the caller but does not tell the function which OAuth client
 // issued the token, so any member token or API key of this workspace passes that
@@ -26,7 +26,7 @@ const sameSecret = (given: string, expected: string) => {
 export default defineLogicFunction({
   universalIdentifier: SOURCE_TOKEN_FUNCTION_UNIVERSAL_IDENTIFIER,
   name: 'source-token',
-  description: 'Returns the workspace HubSpot, Attio or Pipedrive access token to Shuttio',
+  description: 'Returns the workspace HubSpot or Attio access token to Shuttio',
   timeoutSeconds: 15,
   httpRouteTriggerSettings: {
     path: SOURCE_TOKEN_ROUTE,
@@ -43,7 +43,7 @@ export default defineLogicFunction({
 
     const provider = event.queryStringParameters.provider;
     if (!isSourceProvider(provider)) {
-      return new Response({ code: 'bad_provider', message: 'provider must be hubspot, attio or pipedrive.' }, { status: 400 });
+      return new Response({ code: 'bad_provider', message: 'provider must be hubspot or attio.' }, { status: 400 });
     }
     const label = SOURCE_LABELS[provider];
 
@@ -60,8 +60,8 @@ export default defineLogicFunction({
       );
     }
 
-    // Only HubSpot describes its token's life; for Attio (no expiry) and Pipedrive (Twenty
-    // refreshes) Shuttio keeps an answer a few minutes and asks again.
+    // Only HubSpot describes its token's life; for Attio (no expiry) Shuttio keeps an
+    // answer a few minutes and asks again.
     let expiresAt: string | null = null;
     let hubId: number | null = null;
     if (provider === 'hubspot') {

@@ -41,15 +41,3 @@ export const readAttioSelf = async (accessToken: string) => {
   };
 };
 
-// Pipedrive names the company behind a token on its shared API host.
-export const readPipedriveSelf = async (accessToken: string) => {
-  const json = await getJson('https://api.pipedrive.com/v1/users/me', accessToken, 'Pipedrive');
-  const data = json.data as { company_id?: unknown; company_name?: unknown } | undefined;
-  if (typeof data?.company_id !== 'number' && typeof data?.company_id !== 'string') {
-    throw new Error('Pipedrive did not name the company behind the token');
-  }
-  return {
-    companyId: String(data.company_id),
-    companyName: typeof data.company_name === 'string' ? data.company_name : null,
-  };
-};

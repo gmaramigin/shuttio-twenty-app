@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.6.0
+
+- Pipedrive is no longer a source inside Twenty: its connection section in Settings → Apps → Shuttio, `pipedrive-identify-account` and the `PIPEDRIVE_CLIENT_ID`/`PIPEDRIVE_CLIENT_SECRET` variables are gone. Pipedrive data still moves into Twenty through https://www.shuttio.com.
+
 ## 2.5.0
 
 - Review fields shows each field's Twenty type ("Twenty type: Links") from Twenty's own field types, hides empty fields left on Skip behind "Show N empty fields", and folds each object.

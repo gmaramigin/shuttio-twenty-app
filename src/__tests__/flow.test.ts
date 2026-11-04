@@ -30,13 +30,14 @@ describe('initialSource', () => {
     const s = status([
       { id: 'a', source: 'hubspot', status: 'done', createdAt: '2026-10-01T00:00:00Z' },
       { id: 'b', source: 'attio', status: 'sample_done', createdAt: '2026-10-27T00:00:00Z' },
-      { id: 'c', source: 'pipedrive', status: 'rolled_back', createdAt: '2026-10-28T00:00:00Z' },
+      { id: 'c', source: 'hubspot', status: 'rolled_back', createdAt: '2026-10-28T00:00:00Z' },
     ]);
-    expect(initialSource(s, 'pipedrive')).toBe('attio');
+    expect(initialSource(s, 'hubspot')).toBe('attio');
   });
 
   it('falls back to the remembered choice, then HubSpot', () => {
-    expect(initialSource(status([]), 'pipedrive')).toBe('pipedrive');
+    expect(initialSource(status([]), 'attio')).toBe('attio');
+    expect(initialSource(status([]), 'pipedrive')).toBe('hubspot');
     expect(initialSource(null, 'salesforce')).toBe('hubspot');
     expect(initialSource(null, null)).toBe('hubspot');
   });
@@ -47,7 +48,8 @@ describe('initialSource', () => {
       { id: 'b', source: 'attio', status: 'rolled_back', createdAt: '2026-10-02T00:00:00Z' },
     ]);
     expect(initialSource(s, null)).toBe('attio');
-    expect(initialSource(s, 'pipedrive')).toBe('pipedrive');
+    expect(initialSource(s, 'hubspot')).toBe('hubspot');
+    expect(initialSource(s, 'pipedrive')).toBe('attio');
   });
 });
 
