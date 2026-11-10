@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { splitWarnings, summaryLine, visibleObjects } from 'src/ui/run-summary';
+import { needsFieldReview, splitWarnings, summaryLine, visibleObjects } from 'src/ui/run-summary';
 
 const obj = (name: string, done: number, total: number | null, failed = 0) => ({
   name, label: name, done, total, failed, status: 'done',
@@ -18,6 +18,8 @@ describe('run summary', () => {
     const { action, info } = splitWarnings(warnings);
     expect(action).toHaveLength(2);
     expect(info).toHaveLength(2);
+    expect(needsFieldReview(action)).toBe(true);
+    expect(needsFieldReview([action[0]])).toBe(false);
   });
 
   it('hides empty objects and sums records', () => {

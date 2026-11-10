@@ -11,7 +11,7 @@ import { useTheme } from 'twenty-ui/theme';
 
 import { isRunning, type MigrationDetail } from 'src/shuttio-api/contract';
 import { recordInTwenty } from 'src/ui/flow';
-import { splitWarnings, summaryLine, visibleObjects } from 'src/ui/run-summary';
+import { needsFieldReview, splitWarnings, summaryLine, visibleObjects } from 'src/ui/run-summary';
 
 const percent = (done: number, failed: number, total: number | null) =>
   total && total > 0 ? Math.min(100, Math.round(((done + failed) / total) * 100)) : 0;
@@ -57,7 +57,16 @@ const Disclosure = ({ title, children }: { title: string; children: ReactNode })
   );
 };
 
-export const RunProgress = ({ detail }: { detail: MigrationDetail }) => {
+export const RunProgress = ({
+  detail,
+  onRollbackToEdit,
+  rollbackBusy = false,
+}: {
+  detail: MigrationDetail;
+  // Shown on a finished sample: rolling it back reopens the field review.
+  onRollbackToEdit?: () => void;
+  rollbackBusy?: boolean;
+}) => {
   const theme = useTheme();
   const running = isRunning(detail.status);
   const objects = visibleObjects(detail.objects);
@@ -176,6 +185,13 @@ export const RunProgress = ({ detail }: { detail: MigrationDetail }) => {
                 <span key={warning}>{warning}</span>
               ))}
             </div>
+          }
+          action={
+            onRollbackToEdit && needsFieldReview(action) ? (
+              <LightButton size="sm" onClick={onRollbackToEdit} loading={rollbackBusy} disabled={rollbackBusy}>
+                Roll back to change fields
+              </LightButton>
+            ) : undefined
           }
         />
       )}

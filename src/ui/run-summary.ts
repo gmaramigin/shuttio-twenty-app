@@ -3,6 +3,11 @@ import type { MigrationDetail, ObjectProgress } from 'src/shuttio-api/contract';
 // A warning asks the user to do something when it names a step they can take.
 const ACTION_PATTERN = /pick another field|switch it off|add those people|then run again/i;
 
+// Warnings fixed on the field review, which opens again only after the sample is rolled back.
+const FIELD_REVIEW_PATTERN = /field review|pick another field/i;
+
+export const needsFieldReview = (warnings: string[]) => warnings.some((warning) => FIELD_REVIEW_PATTERN.test(warning));
+
 export const isActionWarning = (warning: string) => ACTION_PATTERN.test(warning);
 
 export const splitWarnings = (warnings: string[] = []) => ({
