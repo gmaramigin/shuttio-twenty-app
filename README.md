@@ -10,7 +10,7 @@ The page reads HubSpot, Attio or Capsule: pick the source at the top. Pipedrive,
 
 For Attio, fill in `ATTIO_CLIENT_ID` and `ATTIO_CLIENT_SECRET` (the Shuttio Attio app, with the same callback added to its redirect URLs). Without them Attio cannot be connected; HubSpot still works.
 
-For Capsule, fill in `CAPSULE_CLIENT_ID` and `CAPSULE_CLIENT_SECRET`: a Capsule application of its own (developer.capsulecrm.com → Register application) with the same callback as its redirect URI, since Capsule checks the redirect URI against the application's. The connection asks for read access only.
+For Capsule, fill in `CAPSULE_CLIENT_ID` and `CAPSULE_CLIENT_SECRET`: a Capsule application of its own (developer.capsulecrm.com → Register application) with the same callback as its redirect URI, since Capsule checks the redirect URI against the application's and takes only one per application (a comma-separated list is read as one address and breaks every callback). The connection asks for read access only.
 
 **Workspace admin, once per workspace.**
 
