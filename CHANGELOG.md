@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.8.0
+
+- The sample and migration result reads at a glance: one summary line with the per-object counts folded under "Records by object" (empty objects hidden, failed ones shown with a red tag), record buttons right under it, warnings that need the user's action in a warning callout, and the other notes and records without some links folded away.
+
 ## 2.7.0
 
 - Capsule as a source next to HubSpot and Attio: a Capsule connection provider (workspace-shared, read scope), `capsule-identify-account` pins a connection to one Capsule account by its subdomain, and `source-token` and the status route take `provider=capsule`. Optional server variables `CAPSULE_CLIENT_ID`/`CAPSULE_CLIENT_SECRET`.
