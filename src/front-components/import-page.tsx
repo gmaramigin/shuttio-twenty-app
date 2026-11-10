@@ -624,7 +624,11 @@ const ImportPage = () => {
           return (
             <>
               <Text>The sample is in Twenty. Check it, then pay for the full migration.</Text>
-              <RunProgress detail={detail} />
+              <RunProgress
+                detail={detail}
+                onRollbackToEdit={click('Could not start the rollback', rollback)}
+                rollbackBusy={busy === 'rollback'}
+              />
               <div>
                 <LightButton onClick={click('Could not start the rollback', rollback)} loading={busy === 'rollback'} disabled={busy !== null}>
                   Roll back sample

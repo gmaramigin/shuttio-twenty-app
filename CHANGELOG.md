@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.9.0
+
+- A finished sample whose warnings point to the field review shows "Roll back to change fields" in the action callout: the rollback returns the migration to setup with the saved mapping, and the field review opens again.
+
 ## 2.8.0
 
 - The sample and migration result reads at a glance: one summary line with the per-object counts folded under "Records by object" (empty objects hidden, failed ones shown with a red tag), record buttons right under it, warnings that need the user's action in a warning callout, and the other notes and records without some links folded away.
