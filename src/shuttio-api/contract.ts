@@ -11,7 +11,7 @@ export const SHUTTIO_API_PREFIX = '/api/twenty-app/v1';
 export const PROXY_ROUTE_PREFIX = '/shuttio/api';
 export const PROXY_ROUTE_PATTERN = `${PROXY_ROUTE_PREFIX}/*path`;
 export const SOURCE_TOKEN_ROUTE = '/shuttio/source-token';
-// `?provider=hubspot|attio`; the route kept its 2.0.0 name.
+// `?provider=hubspot|attio|capsule`; the route kept its 2.0.0 name.
 export const SOURCE_STATUS_ROUTE = '/shuttio/hubspot-status';
 
 // Header Shuttio sends back when it asks for a source token. The value is the
@@ -20,13 +20,14 @@ export const SOURCE_SECRET_HEADER = 'x-shuttio-source-secret';
 // Header the proxy adds so Shuttio knows which Twenty API validates the token.
 export const TWENTY_API_URL_HEADER = 'x-twenty-api-url';
 
-export type SourceProvider = 'hubspot' | 'attio';
+export type SourceProvider = 'hubspot' | 'attio' | 'capsule';
 
-export const SOURCE_PROVIDERS: readonly SourceProvider[] = ['hubspot', 'attio'];
+export const SOURCE_PROVIDERS: readonly SourceProvider[] = ['hubspot', 'attio', 'capsule'];
 
 export const SOURCE_LABELS: Record<SourceProvider, string> = {
   hubspot: 'HubSpot',
   attio: 'Attio',
+  capsule: 'Capsule',
 };
 
 export const isSourceProvider = (value: unknown): value is SourceProvider =>

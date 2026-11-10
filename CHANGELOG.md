@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.7.0
+
+- Capsule as a source next to HubSpot and Attio: a Capsule connection provider (workspace-shared, read scope), `capsule-identify-account` pins a connection to one Capsule account by its subdomain, and `source-token` and the status route take `provider=capsule`. Optional server variables `CAPSULE_CLIENT_ID`/`CAPSULE_CLIENT_SECRET`.
+
 ## 2.6.0
 
 - Pipedrive is no longer a source inside Twenty: its connection section in Settings → Apps → Shuttio, `pipedrive-identify-account` and the `PIPEDRIVE_CLIENT_ID`/`PIPEDRIVE_CLIENT_SECRET` variables are gone. Pipedrive data still moves into Twenty through https://www.shuttio.com.

@@ -881,6 +881,6 @@ const ImportPage = () => {
 export default defineFrontComponent({
   universalIdentifier: IMPORT_PAGE_FRONT_COMPONENT_UNIVERSAL_IDENTIFIER,
   name: 'import-page',
-  description: `${IMPORT_PAGE_NAME}: link Shuttio, connect HubSpot or Attio, map fields, run a sample, pay, migrate`,
+  description: `${IMPORT_PAGE_NAME}: link Shuttio, connect HubSpot, Attio or Capsule, map fields, run a sample, pay, migrate`,
   component: ImportPage,
 });

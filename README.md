@@ -2,13 +2,15 @@
 
 Adds an **Import with Shuttio** page to the left menu of your Twenty workspace. From that page you move your HubSpot data into Twenty: link a Shuttio account, connect HubSpot, review the field mapping, check a free sample, pay, and run the full migration. The command **Import data with Shuttio** (Cmd+K) opens the same page.
 
-The page reads HubSpot or Attio: pick the source at the top. Pipedrive, Affinity, Salesforce, another Twenty workspace and CSV files still go through https://www.shuttio.com with Twenty as the destination.
+The page reads HubSpot, Attio or Capsule: pick the source at the top. Pipedrive, Affinity, Salesforce, another Twenty workspace and CSV files still go through https://www.shuttio.com with Twenty as the destination.
 
 ## Setup
 
 **App owner, once per Twenty server.** In Twenty, open Settings → Developers → Shuttio → Config and fill in `HUBSPOT_CLIENT_ID` and `HUBSPOT_CLIENT_SECRET`: the client ID and secret of the Shuttio HubSpot app. The HubSpot app must list `https://api.twenty.com/auth/apps/callback` (Twenty Cloud) as a redirect URL.
 
 For Attio, fill in `ATTIO_CLIENT_ID` and `ATTIO_CLIENT_SECRET` (the Shuttio Attio app, with the same callback added to its redirect URLs). Without them Attio cannot be connected; HubSpot still works.
+
+For Capsule, fill in `CAPSULE_CLIENT_ID` and `CAPSULE_CLIENT_SECRET`: a Capsule application of its own (developer.capsulecrm.com → Register application) with the same callback as its redirect URI, since Capsule checks the redirect URI against the application's. The connection asks for read access only.
 
 **Workspace admin, once per workspace.**
 

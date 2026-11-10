@@ -41,3 +41,13 @@ export const readAttioSelf = async (accessToken: string) => {
   };
 };
 
+
+// Capsule names the account behind a token: GET /api/v2/site answers its subdomain and name.
+export const readCapsuleSite = async (accessToken: string) => {
+  const json = await getJson('https://api.capsulecrm.com/api/v2/site', accessToken, 'Capsule');
+  const site = (json.site ?? {}) as { subdomain?: unknown; name?: unknown };
+  if (typeof site.subdomain !== 'string' || !site.subdomain) {
+    throw new Error('Capsule did not name the account behind the token');
+  }
+  return { subdomain: site.subdomain, name: typeof site.name === 'string' && site.name ? site.name : null };
+};
