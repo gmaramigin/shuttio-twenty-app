@@ -623,7 +623,7 @@ const ImportPage = () => {
         if (detail.status === 'sample_done') {
           return (
             <>
-              <Text>The sample is in Twenty. Open a few records and check them, then pay for the full migration.</Text>
+              <Text>The sample is in Twenty. Check it, then pay for the full migration.</Text>
               <RunProgress detail={detail} />
               <div>
                 <LightButton onClick={click('Could not start the rollback', rollback)} loading={busy === 'rollback'} disabled={busy !== null}>
