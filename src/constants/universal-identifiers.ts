@@ -1,6 +1,6 @@
 export const APP_DISPLAY_NAME = 'Shuttio';
 export const APP_DESCRIPTION =
-  'Move HubSpot or Attio data into Twenty from a page inside your workspace: companies, people, deals, custom objects, notes and tasks, with the links between them.';
+  'Move HubSpot, Attio or Capsule data into Twenty from a page inside your workspace: companies, people, deals, custom objects, notes and tasks, with the links between them.';
 export const APPLICATION_UNIVERSAL_IDENTIFIER = 'ec2186f5-bd22-4817-ba34-09453cb26edf';
 export const DEFAULT_ROLE_UNIVERSAL_IDENTIFIER = 'c24420b8-062e-4cee-bb33-253c8e05a1aa';
 export const IMPORT_FRONT_COMPONENT_UNIVERSAL_IDENTIFIER =
@@ -41,5 +41,11 @@ export const ATTIO_CONNECTION_PROVIDER_UNIVERSAL_IDENTIFIER =
   '134a1408-196e-455d-a2e6-d5f81b47f19f';
 export const ATTIO_IDENTIFY_ACCOUNT_FUNCTION_UNIVERSAL_IDENTIFIER =
   '6c0afefb-a3ec-4dec-ad87-0a0b41024272';
+
+// 2.7.0: Capsule as a source.
+export const CAPSULE_CONNECTION_PROVIDER_UNIVERSAL_IDENTIFIER =
+  'b11ca106-79dd-40ef-a4ed-8fb6e9940d7f';
+export const CAPSULE_IDENTIFY_ACCOUNT_FUNCTION_UNIVERSAL_IDENTIFIER =
+  'db1081fd-a8ad-4746-9ec4-ef28e898c286';
 
 export const IMPORT_PAGE_NAME = 'Import with Shuttio';

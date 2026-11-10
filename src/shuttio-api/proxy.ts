@@ -95,7 +95,7 @@ export const proxyToShuttio = async (method: Method, event: RoutePayload) => {
     const functionsUrl = process.env.TWENTY_FUNCTIONS_URL || `${apiUrl}/s`;
     const provider = (body as { provider?: unknown }).provider;
     if (!isSourceProvider(provider)) {
-      return errorResponse(400, 'bad_provider', 'The source must be HubSpot or Attio.');
+      return errorResponse(400, 'bad_provider', 'The source must be HubSpot, Attio or Capsule.');
     }
     body = { provider, functionsUrl, sourceTokenSecret: await getOrCreateSourceSecret() };
   }

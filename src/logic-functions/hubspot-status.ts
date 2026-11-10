@@ -19,7 +19,7 @@ export type SourceStatus = {
 export default defineLogicFunction({
   universalIdentifier: HUBSPOT_STATUS_FUNCTION_UNIVERSAL_IDENTIFIER,
   name: 'hubspot-status',
-  description: 'Reports whether this workspace has a working HubSpot or Attio connection',
+  description: 'Reports whether this workspace has a working HubSpot, Attio or Capsule connection',
   timeoutSeconds: 10,
   httpRouteTriggerSettings: {
     path: SOURCE_STATUS_ROUTE,
