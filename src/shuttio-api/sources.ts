@@ -42,6 +42,19 @@ export const readAttioSelf = async (accessToken: string) => {
 };
 
 
+// Cloze names the account behind a token: GET /v1/user/profile answers the user's `key` (the account id) and email.
+export const readClozeProfile = async (accessToken: string) => {
+  const json = await getJson('https://api.cloze.com/v1/user/profile', accessToken, 'Cloze');
+  const p = (json.profile ?? json.user ?? {}) as { key?: unknown; email?: unknown; name?: unknown };
+  const email = typeof p.email === 'string' ? p.email.trim() : '';
+  const key = typeof p.key === 'string' ? p.key.trim() : '';
+  const accountId = key || email.toLowerCase();
+  if (!accountId) {
+    throw new Error('Cloze did not name the account behind the token');
+  }
+  return { accountId, email: email || null, name: typeof p.name === 'string' && p.name.trim() ? p.name.trim() : null };
+};
+
 // Capsule names the account behind a token: GET /api/v2/site answers its subdomain and name.
 export const readCapsuleSite = async (accessToken: string) => {
   const json = await getJson('https://api.capsulecrm.com/api/v2/site', accessToken, 'Capsule');

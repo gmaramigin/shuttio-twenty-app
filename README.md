@@ -2,7 +2,7 @@
 
 Adds an **Import with Shuttio** page to the left menu of your Twenty workspace. From that page you move your HubSpot data into Twenty: link a Shuttio account, connect HubSpot, review the field mapping, check a free sample, pay, and run the full migration. The command **Import data with Shuttio** (Cmd+K) opens the same page.
 
-The page reads HubSpot, Attio or Capsule: pick the source at the top. Pipedrive, Affinity, Salesforce, another Twenty workspace and CSV files still go through https://www.shuttio.com with Twenty as the destination.
+The page reads HubSpot, Attio, Capsule or Cloze: pick the source at the top. Pipedrive, Affinity, Salesforce, another Twenty workspace and CSV files still go through https://www.shuttio.com with Twenty as the destination.
 
 ## Setup
 
@@ -12,10 +12,12 @@ For Attio, fill in `ATTIO_CLIENT_ID` and `ATTIO_CLIENT_SECRET` (the Shuttio Atti
 
 For Capsule, fill in `CAPSULE_CLIENT_ID` and `CAPSULE_CLIENT_SECRET`: a Capsule application of its own (developer.capsulecrm.com → Register application) with the same callback as its redirect URI, since Capsule checks the redirect URI against the application's and takes only one per application (a comma-separated list is read as one address and breaks every callback). The connection asks for read access only.
 
+For Cloze, fill in `CLOZE_CLIENT_ID` and `CLOZE_CLIENT_SECRET` (the Shuttio Cloze app, with the same callback added to its redirect URLs; Cloze takes several). The connection asks for `basic read_relation read_content`: read access only.
+
 **Workspace admin, once per workspace.**
 
 1. Install Shuttio from Settings → Apps.
-2. Open Settings → Apps → Shuttio and click **Add connection** in the HubSpot or Attio section. HubSpot asks a super admin to approve read access.
+2. Open Settings → Apps → Shuttio and click **Add connection** in the HubSpot, Attio, Capsule or Cloze section. HubSpot asks a super admin to approve read access.
 3. Open **Import with Shuttio** in the left menu and follow the six steps.
 
 Step 1 opens Shuttio in a new tab: you sign in to Shuttio and connect this workspace there with Twenty's OAuth. Use an admin account: Shuttio adds custom fields, options and objects.

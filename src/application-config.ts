@@ -15,7 +15,8 @@ export default defineApplication({
   // The owner's source apps, entered once under Settings > Developers > Shuttio > Config.
   // HubSpot: same values as Shuttio's HubSpot app. Attio: Shuttio's Attio app (its redirect
   // URLs include Twenty's callback). Capsule: a Capsule application of its own, registered
-  // with Twenty's callback as its redirect URI. Optional: a source without them cannot be connected.
+  // with Twenty's callback as its redirect URI. Cloze: Shuttio's Cloze app (its redirect URLs
+  // include Twenty's callback). Optional: a source without them cannot be connected.
   serverVariables: {
     HUBSPOT_CLIENT_ID: {
       description: 'Client ID of the Shuttio HubSpot app',
@@ -40,6 +41,16 @@ export default defineApplication({
     CAPSULE_CLIENT_ID: {
       description: 'Client ID of the Shuttio Capsule application for Twenty',
       isSecret: false,
+      isRequired: false,
+    },
+    CLOZE_CLIENT_ID: {
+      description: 'Client ID of the Shuttio Cloze app',
+      isSecret: false,
+      isRequired: false,
+    },
+    CLOZE_CLIENT_SECRET: {
+      description: 'Client secret of the Shuttio Cloze app',
+      isSecret: true,
       isRequired: false,
     },
     CAPSULE_CLIENT_SECRET: {
