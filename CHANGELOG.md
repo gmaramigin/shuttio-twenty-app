@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.10.0
+
+- Cloze as a source next to HubSpot, Attio and Capsule: a Cloze connection provider (workspace-shared, scopes `basic read_relation read_content`), `cloze-identify-account` pins a connection to one Cloze account by its profile key, and `source-token` and the status route take `provider=cloze`. Optional server variables `CLOZE_CLIENT_ID`/`CLOZE_CLIENT_SECRET`.
+
 ## 2.9.0
 
 - A finished sample whose warnings point to the field review shows "Roll back to change fields" in the action callout: the rollback returns the migration to setup with the saved mapping, and the field review opens again.
